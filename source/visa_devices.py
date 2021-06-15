@@ -3,7 +3,7 @@ import pyvisa as visa
 
 
 class VISAController:
-    RESPONSE_DELAY_TIME = 0.5
+    RESPONSE_DELAY_TIME = 0.05
     def __init__(self, visa_address):
         self.visa_address = visa_address
         self.resource_manager, self.session = self.create_connection()
@@ -68,7 +68,7 @@ class OwonVDS1022(VISAController):
         # Run method configuration parameters:
         self.relation_horizontal_signal = 3
         self.relation_signal_vertical = 2
-        self.relation_acq_time_horizontal = 3
+        self.relation_acq_time_horizontal = 10
 
         # VISA controller:
         super().__init__(self.address)
@@ -281,7 +281,7 @@ if __name__ == '__main__':
                "frequency": 1000,
                "trigger_edge_slope": "RISE",
                "coupling": "DC",
-               "probe_attenuation": "X1",
+               "probe_attenuation": "X10",
                "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]    # Inputs per channel
     result = osc_obj.run(inputs)
 
