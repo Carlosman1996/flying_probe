@@ -1,7 +1,9 @@
+import time
 import pyvisa as visa
 
 
 class VISAController:
+    RESPONSE_DELAY_TIME = 0.5
     def __init__(self, visa_address):
         self.visa_address = visa_address
         self.resource_manager, self.session = self.create_connection()
@@ -38,6 +40,7 @@ class VISAController:
             self.exception_handler(exception)
 
         print(f"SCPI Command: {scpi_command} - Result: {response}\n")
+        time.sleep(self.RESPONSE_DELAY_TIME)
         return response
 
     def close_connection(self):
@@ -50,15 +53,52 @@ class OwonVDS1022(VISAController):
         # Oscilloscope attributes:
         self.address = f"TCPIP0::127.0.0.1::{port}::SOCKET"
         self.pixels_per_div = 25
+        self.vertical_divisions = 5
+        self.horizontal_divisions = 20
+        self.channels = [1, 2]
+        self.timebase_values = {0.000000005: "5ns", 0.00000001: "10ns", 0.00000002: "20ns", 0.00000005: "50ns",
+                                0.0000001: "100ns", 0.0000002: "200ns", 0.0000005: "500ns", 0.000001: "1us",
+                                0.000002: "2us", 0.000005: "5us", 0.00001: "10us", 0.00002: "20us", 0.00005: "50us",
+                                0.0001: "100us", 0.0002: "200us", 0.0005: "500us", 0.001: "1ms", 0.002: "2ms",
+                                0.005: "5ms", 0.01: "10ms", 0.02: "20ms", 0.05: "50ms", 0.1: "100ms", 0.2: "200ms",
+                                0.5: "500ms", 1: "1s", 2: "2s", 5: "5s", 10: "10s", 20: "20s", 50: "50s", 100: "100s"}
+        self.channel_values = {0.005: "5mv", 0.01: "10mv", 0.02: "20mv", 0.05: "50mv", 0.1: "100mv", 0.2: "200mv",
+                               0.5: "500mv", 1: "1v", 2: "2v", 5: "5v"}
+
+        # Run method configuration parameters:
+        self.relation_horizontal_signal = 3
+        self.relation_signal_vertical = 2
+        self.relation_acq_time_horizontal = 3
 
         # VISA controller:
         super().__init__(self.address)
 
     def convert_pixels_to_value(self, vertical_scale, offset_per_div, pixels):
-        return vertical_scale * ((pixels - offset_per_div * self.pixels_per_div) / self.pixels_per_div)
+        try:
+            return vertical_scale * ((pixels - offset_per_div * self.pixels_per_div) / self.pixels_per_div)
+        except ZeroDivisionError:
+            return 0
 
     def convert_value_to_pixels(self, vertical_scale, offset_per_div, value):
-        return self.pixels_per_div * (value / vertical_scale) + offset_per_div * self.pixels_per_div
+        try:
+            return int(self.pixels_per_div * (value / vertical_scale) + offset_per_div * self.pixels_per_div)
+        except ZeroDivisionError:
+            return 0
+
+    @staticmethod
+    def get_closest_value_with_key_dictionary(dictionary, search_key):
+        return dictionary.get(search_key) or dictionary[min(dictionary.keys(), key=lambda key: abs(key - search_key))]
+
+    @staticmethod
+    def get_closest_key_dictionary(dictionary, search_key):
+        return min(dictionary.keys(), key=lambda key: abs(key - search_key))
+
+    @staticmethod
+    def get_key_from_value_dictionary(dictionary, search_value):
+        for key, value in dictionary.items():
+            if value == search_value:
+                return key
+        return None
 
     def get_id(self):
         self.send_command("*IDN?")
@@ -98,16 +138,15 @@ class OwonVDS1022(VISAController):
             {AC | DC | GND}
         Channel possible probe attenuation ratios:
             {X1 | X10 | X100 | X1000}
-        Channel possible scales:
+        Channel possible scales (float values, not string type: eg: 0.005 instead of 5mV):
             {5mV | 10mV | 20mV | 50mV | 100mV | 200mV | 500mV | 1V | 2V | 5V}
         """
-        self.send_command(f":CHANNEL{channel}:COUPING {coupling}")
+        self.send_command(f":CHANNEL{channel}:COUPLING {coupling}")
         self.send_command(f":CHANNEL{channel}:PROBE {probe}")
         self.send_command(f":CHANNEL{channel}:SCALE {scale}")
-        self.send_command(f":CHANNEL{channel}:OFFSET "
-                          f"{self.convert_value_to_pixels(scale, 0, offset)}")
+        self.send_command(f":CHANNEL{channel}:OFFSET {self.convert_value_to_pixels(scale, 0, offset)}")
 
-    def set_edge_trigger(self, channel, vertical_scale, offset_per_div, mode="NORMAL", slope="RISE", level=0.0):
+    def set_edge_trigger(self, channel, mode="AUTO", slope="RISE", level=0.0):
         """
         Trigger possible modes:
             {AUTO | NORMAL}
@@ -117,11 +156,12 @@ class OwonVDS1022(VISAController):
         self.send_command(f":TRIGGER:MODE {mode}")
         self.send_command(f":TRIGGER:SINGLE EDGE")
         self.send_command(f":TRIGGER:SINGLE:EDGE:SOURCE CH{str(channel)}")
-        self.send_command(f":TRIGGER:SINGLE:EDGE:SLOPE {slope}")  # RISE, FALL
-        self.send_command(f":TRIGGER:SINGLE:EDGE:LEVEL "
-                          f"{self.convert_value_to_pixels(vertical_scale, offset_per_div, level)}")
+        self.send_command(f":TRIGGER:SINGLE:EDGE:SLOPE {slope}")
 
-    def set_acquire(self, acq_type="SAMPLE", count=4, n_samples="1K"):
+        vertical_scale = float(self.send_command(f":CHANNEL{channel}:SCALE?"))
+        self.send_command(f":TRIGGER:SINGLE:EDGE:LEVEL {self.convert_value_to_pixels(vertical_scale, 0, level)}")
+
+    def set_acquire(self, acq_type="SAMPLE", count=1):
         """
         Acquire possible modes:
             {SAMPLE | AVERAGE | PEAK}
@@ -133,7 +173,6 @@ class OwonVDS1022(VISAController):
         self.send_command(f":ACQUIRE:TYPE {acq_type}")
         if type == "AVERAGE":
             self.send_command(f":ACQUIRE:AVERAGE {count}")
-        self.send_command(f":TRIGGER:MDEPTH {n_samples}")
 
     def set_measurement(self, channel, measurement):
         """
@@ -159,15 +198,93 @@ class OwonVDS1022(VISAController):
             {PERiod | FREQuency | AVERage | MAX | MIN | VTOP | VBASe | VAMP | PKPK | CYCRms | RTime |
              FTime | PDUTy | NDUTy | PWIDth | NWIDth | OVERshoot | PREShoot | RDELay | FDELay}
         """
-        self.send_command(f":MEASURE{channel}:{measurement}?")
+        string_value = self.send_command(f":MEASURE{channel}:{measurement}?")
+        if string_value == '?':
+            return None
+        else:
+            return float(string_value)
 
     def get_waveform(self, channel):
-        self.send_command(f"*ADC? CH{channel}")
+        return self.send_command(f"*ADC? CH{channel}")
+
+    def run(self, dict_inputs):
+        if len(dict_inputs) == 0:
+            return None
+
+        # Check if all channels are available:
+        for dict_input in dict_inputs:
+            if dict_input["channel"] not in self.channels:
+                return None
+
+        # Stop device:
+        self.set_general_state("STOP")
+
+        # Disable all channels:
+        for channel in self.channels:
+            self.set_channel_state(channel, "OFF")
+
+        # Set timebase:
+        timebase = self.relation_horizontal_signal * (1 / dict_inputs[0]["frequency"]) / self.horizontal_divisions
+        horizontal_scale = self.get_closest_value_with_key_dictionary(self.timebase_values, timebase)
+        self.set_timebase(horizontal_scale)
+
+        # Configure all channels:
+        for dict_input in dict_inputs:
+            if dict_input["channel"] in self.channels:
+                # Configure particular channel:
+                vertical_amplitude = self.relation_signal_vertical * dict_input["signal_max_value"] / \
+                                     self.vertical_divisions
+                vertical_scale = self.get_closest_key_dictionary(self.channel_values, vertical_amplitude)
+                self.set_channel_configuration(dict_input["channel"], vertical_scale, 0,
+                                               dict_input["coupling"], dict_input["probe_attenuation"])
+
+                # Enable channel:
+                self.set_channel_state(dict_input["channel"], "ON")
+
+        # Configure trigger:
+        trigger_level = (dict_inputs[0]["signal_max_value"] - dict_inputs[0]["signal_min_value"]) / 2
+        self.set_edge_trigger(dict_inputs[0]["channel"], "AUTO", dict_inputs[0]["trigger_edge_slope"], trigger_level)
+
+        # Configure acquire:
+        self.set_acquire()
+
+        # Start device:
+        self.set_general_state("RUN")
+
+        # Minimum time to acquire the desired signal:
+        time.sleep(timebase * self.relation_acq_time_horizontal)
+
+        # Get measurements:
+        measurements = []
+        for dict_input in dict_inputs:
+            if dict_input["channel"] in self.channels:
+                channel_measurements = {"channel": dict_input["channel"],
+                                        "measurements": {}}
+                for measurement in dict_input["measurements"]:
+                    channel_measurements["measurements"][measurement] = self.get_measurement(dict_input["channel"],
+                                                                                             measurement)
+
+                measurements.append(channel_measurements)
+
+        # Stop device:
+        self.set_general_state("STOP")
+
+        return measurements
 
 
 if __name__ == '__main__':
     osc_obj = OwonVDS1022(port=5188)
-    osc_obj.set_general_state("RUN")
-    # osc_obj.set_edge_trigger(channel=1, vertical_scale=5, offset_per_div=1.64, level=2.5)
-    osc_obj.get_waveform(1)
+
+    inputs = [{"channel": 1,
+               "signal_max_value": 5,
+               "signal_min_value": 0,
+               "frequency": 1000,
+               "trigger_edge_slope": "RISE",
+               "coupling": "DC",
+               "probe_attenuation": "X1",
+               "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]    # Inputs per channel
+    result = osc_obj.run(inputs)
+
     osc_obj.close_connection()
+
+    print(result)
