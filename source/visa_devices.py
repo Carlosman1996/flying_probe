@@ -1,11 +1,21 @@
 import time
+import random
+from datetime import datetime
 import pyvisa as visa
+
+random.seed(str(datetime.now()))
+
+
+__author__ = "Carlos Manuel Molina Sotoca"
+__email__ = "cmmolinas01@gmail.com"
 
 
 class VISAController:
-    RESPONSE_DELAY_TIME = 0.05
-    def __init__(self, visa_address):
+    RESPONSE_DELAY_TIME = 0.1
+
+    def __init__(self, visa_address, device_active):
         self.visa_address = visa_address
+        self.device_active = device_active
         self.resource_manager, self.session = self.create_connection()
 
     @staticmethod
@@ -17,39 +27,51 @@ class VISAController:
                         f"\tDescription: {exception.description}")
 
     def create_connection(self):
-        # Create a connection (session) to the TCP/IP socket on the instrument.
-        resource_manager = visa.ResourceManager()
-        try:
-            session = resource_manager.open_resource(self.visa_address)
-        except visa.VisaIOError as exception:
-            self.exception_handler(exception)
+        # If the device is set to active, initialize VISA interface:
+        if self.device_active:
+            # Create a connection (session) to the TCP/IP socket on the instrument.
+            resource_manager = visa.ResourceManager()
+            try:
+                session = resource_manager.open_resource(self.visa_address)
+            except visa.VisaIOError as exception:
+                self.exception_handler(exception)
 
-        # For Serial and TCP/IP socket connections enable the read Termination Character, or read's will timeout
-        if session.resource_name.startswith('ASRL') or session.resource_name.endswith('SOCKET'):
-            session.read_termination = '\n'
+            # For Serial and TCP/IP socket connections enable the read Termination Character, or read's will timeout
+            if session.resource_name.startswith('ASRL') or session.resource_name.endswith('SOCKET'):
+                session.read_termination = '\n'
 
-        # Set huge timeout for ADC reading:
-        session.timeout = 10000
+            # Set huge timeout for ADC reading:
+            session.timeout = 10000
+        # If the device is in test mode, set the return parameters to None:
+        else:
+            resource_manager = None
+            session = None
         return resource_manager, session
 
     def send_command(self, scpi_command):
-        try:
-            self.session.write(scpi_command)
-            response = self.session.read()
-        except visa.VisaIOError as exception:
-            self.exception_handler(exception)
+        # If the device is set to active, write and read command:
+        if self.device_active:
+            try:
+                self.session.write(scpi_command)
+                response = self.session.read()
+            except visa.VisaIOError as exception:
+                self.exception_handler(exception)
+        # If the device is in test mode, generate a float random number:
+        else:
+            response = random.uniform(0, 1000000)
 
-        print(f"SCPI Command: {scpi_command} - Result: {response}\n")
         time.sleep(self.RESPONSE_DELAY_TIME)
         return response
 
     def close_connection(self):
-        self.session.close()
-        self.resource_manager.close()
+        # If the device is set to active, close VISA interface:
+        if self.device_active:
+            self.session.close()
+            self.resource_manager.close()
 
 
 class OwonVDS1022(VISAController):
-    def __init__(self, port=5188):
+    def __init__(self, port=5188, device_active=True):
         # Oscilloscope attributes:
         self.address = f"TCPIP0::127.0.0.1::{port}::SOCKET"
         self.pixels_per_div = 25
@@ -71,7 +93,7 @@ class OwonVDS1022(VISAController):
         self.relation_acq_time_horizontal = 10
 
         # VISA controller:
-        super().__init__(self.address)
+        super().__init__(self.address, device_active)
 
     def convert_pixels_to_value(self, vertical_scale, offset_per_div, pixels):
         try:
@@ -130,7 +152,7 @@ class OwonVDS1022(VISAController):
         Channel possible states:
             {ON | OFF}
         """
-        self.send_command(f":CHANNEL{channel}:DISPLAY {state}")     # ON, OFF
+        self.send_command(f":CHANNEL{channel}:DISPLAY {state}")  # ON, OFF
 
     def set_channel_configuration(self, channel, scale, offset, coupling="DC", probe="X1"):
         """
@@ -214,7 +236,7 @@ class OwonVDS1022(VISAController):
         # Check if all channels are available:
         for dict_input in dict_inputs:
             if dict_input["channel"] not in self.channels:
-                return None
+                raise Exception("Channel is not valid. Available channels are 1 and 2.")
 
         # Stop device:
         self.set_general_state("STOP")
@@ -273,7 +295,7 @@ class OwonVDS1022(VISAController):
 
 
 if __name__ == '__main__':
-    osc_obj = OwonVDS1022(port=5188)
+    osc_obj = OwonVDS1022(port=5188, device_active=False)
 
     inputs = [{"channel": 1,
                "signal_max_value": 5,
@@ -282,7 +304,7 @@ if __name__ == '__main__':
                "trigger_edge_slope": "RISE",
                "coupling": "DC",
                "probe_attenuation": "X10",
-               "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]    # Inputs per channel
+               "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]  # Inputs per channel
     result = osc_obj.run(inputs)
 
     osc_obj.close_connection()
