@@ -11,7 +11,7 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class VISAController:
-    RESPONSE_DELAY_TIME = 0.1
+    RESPONSE_DELAY_TIME = 0.25
 
     def __init__(self, visa_address, device_active):
         self.visa_address = visa_address
@@ -88,9 +88,9 @@ class OwonVDS1022(VISAController):
                                0.5: "500mv", 1: "1v", 2: "2v", 5: "5v"}
 
         # Run method configuration parameters:
-        self.relation_horizontal_signal = 3
+        self.relation_horizontal_signal = 5
         self.relation_signal_vertical = 2
-        self.relation_acq_time_horizontal = 10
+        self.relation_acq_time_horizontal = 5
 
         # VISA controller:
         super().__init__(self.address, device_active)
@@ -183,7 +183,7 @@ class OwonVDS1022(VISAController):
         vertical_scale = float(self.send_command(f":CHANNEL{channel}:SCALE?"))
         self.send_command(f":TRIGGER:SINGLE:EDGE:LEVEL {self.convert_value_to_pixels(vertical_scale, 0, level)}")
 
-    def set_acquire(self, acq_type="SAMPLE", count=1):
+    def set_acquire(self, acq_type="AVERAGE", count=4):
         """
         Acquire possible modes:
             {SAMPLE | AVERAGE | PEAK}
@@ -238,12 +238,15 @@ class OwonVDS1022(VISAController):
             if dict_input["channel"] not in self.channels:
                 raise Exception("Channel is not valid. Available channels are 1 and 2.")
 
-        # Stop device:
-        self.set_general_state("STOP")
-
         # Disable all channels:
         for channel in self.channels:
             self.set_channel_state(channel, "OFF")
+
+        # Run device:
+        self.set_general_state("RUN")
+
+        # Configure acquire:
+        self.set_acquire()
 
         # Set timebase:
         timebase = self.relation_horizontal_signal * (1 / dict_inputs[0]["frequency"]) / self.horizontal_divisions
@@ -267,12 +270,6 @@ class OwonVDS1022(VISAController):
         trigger_level = (dict_inputs[0]["signal_max_value"] - dict_inputs[0]["signal_min_value"]) / 2
         self.set_edge_trigger(dict_inputs[0]["channel"], "AUTO", dict_inputs[0]["trigger_edge_slope"], trigger_level)
 
-        # Configure acquire:
-        self.set_acquire()
-
-        # Start device:
-        self.set_general_state("RUN")
-
         # Minimum time to acquire the desired signal:
         time.sleep(timebase * self.relation_acq_time_horizontal)
 
@@ -295,15 +292,15 @@ class OwonVDS1022(VISAController):
 
 
 if __name__ == '__main__':
-    osc_obj = OwonVDS1022(port=5188, device_active=False)
+    osc_obj = OwonVDS1022(port=5188, device_active=True)
 
     inputs = [{"channel": 1,
                "signal_max_value": 5,
                "signal_min_value": 0,
-               "frequency": 1000,
-               "trigger_edge_slope": "RISE",
+               "frequency": 1000000,
+               "trigger_edge_slope": "FALL",
                "coupling": "DC",
-               "probe_attenuation": "X10",
+               "probe_attenuation": "X1",
                "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]  # Inputs per channel
     result = osc_obj.run(inputs)
 
