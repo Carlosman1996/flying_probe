@@ -27,6 +27,9 @@ class VISAController:
                         f"\tDescription: {exception.description}")
 
     def create_connection(self):
+        resource_manager = None
+        session = None
+
         # If the device is set to active, initialize VISA interface:
         if self.device_active:
             # Create a connection (session) to the TCP/IP socket on the instrument.
@@ -43,12 +46,11 @@ class VISAController:
             # Set huge timeout for ADC reading:
             session.timeout = 10000
         # If the device is in test mode, set the return parameters to None:
-        else:
-            resource_manager = None
-            session = None
         return resource_manager, session
 
     def send_command(self, scpi_command):
+        response = None
+
         # If the device is set to active, write and read command:
         if self.device_active:
             try:
@@ -297,10 +299,10 @@ if __name__ == '__main__':
     inputs = [{"channel": 1,
                "signal_max_value": 5,
                "signal_min_value": 0,
-               "frequency": 1000000,
+               "frequency": 10000000,
                "trigger_edge_slope": "FALL",
                "coupling": "DC",
-               "probe_attenuation": "X1",
+               "probe_attenuation": "X10",
                "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}]  # Inputs per channel
     result = osc_obj.run(inputs)
 
