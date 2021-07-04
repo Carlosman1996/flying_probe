@@ -76,7 +76,7 @@ class SerialPortController:
 
 
 class Engine(SerialPortController):
-    def __init__(self, serial_port, baud_rate, device_active=True):
+    def __init__(self, serial_port, baud_rate=115200, device_active=True):
         self.serial_port = serial_port
         self.baud_rate = baud_rate
         self.device_active = device_active
@@ -89,12 +89,14 @@ class Engine(SerialPortController):
         print(f"G91Y{movement}F{speed}")
         response = self.send_command(f"G91Y{movement}F{speed}")
         print(response + "\n")
+        return response
 
     def homing(self):
         # Send GCODE commands:
         print(f"G28")
         response = self.send_command(f"G28 X0 Y0 Z0")
         print(response + "\n")
+        return response
 
 
 if __name__ == '__main__':
