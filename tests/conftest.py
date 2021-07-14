@@ -19,5 +19,5 @@ def vds1022_inactive():
 
 @pytest.fixture
 def engine_inactive():
-    engine_obj = gcode_devices.Engine(serial_port="COM1", device_active=False)
+    engine_obj = gcode_devices.YAxisEngine(serial_port="COM1", device_active=False)
     return engine_obj

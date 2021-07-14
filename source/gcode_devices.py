@@ -66,7 +66,7 @@ class SerialPortController:
                 self.exception_handler(exception)
         # If the device is in test mode, generate a float random number:
         else:
-            response = command
+            response = "OK\nOK\n\n"
         return response
 
     def close_connection(self):
@@ -75,7 +75,17 @@ class SerialPortController:
             self.session.close()
 
 
-class Engine(SerialPortController):
+class XAxisEngine(SerialPortController):
+    def __init__(self, serial_port, baud_rate=115200, device_active=True):
+        self.serial_port = serial_port
+        self.baud_rate = baud_rate
+        self.device_active = device_active
+
+        # Serial port controller:
+        super().__init__(self.serial_port, self.baud_rate, device_active)
+
+
+class YAxisEngine(SerialPortController):
     def __init__(self, serial_port, baud_rate=115200, device_active=True):
         self.serial_port = serial_port
         self.baud_rate = baud_rate
@@ -85,22 +95,52 @@ class Engine(SerialPortController):
         super().__init__(self.serial_port, self.baud_rate, device_active)
 
     def move(self, movement, speed):
-        # Send GCODE commands:
-        print(f"G91Y{movement}F{speed}")
         response = self.send_command(f"G91Y{movement}F{speed}")
-        print(response + "\n")
         return response
 
     def homing(self):
-        # Send GCODE commands:
-        print(f"G28")
         response = self.send_command(f"G28 X0 Y0 Z0")
-        print(response + "\n")
+        return response
+
+
+class ZAxisEngine(SerialPortController):
+    def __init__(self, serial_port, baud_rate=115200, device_active=True):
+        self.serial_port = serial_port
+        self.baud_rate = baud_rate
+        self.device_active = device_active
+
+        # Serial port controller:
+        super().__init__(self.serial_port, self.baud_rate, device_active)
+
+    def low_level(self):
+        response = self.send_command(f"M4")
+        return response
+
+    def high_level(self):
+        response = self.send_command(f"M5")
+        return response
+
+    def calibration(self):
+        self.low_level()
+        time.sleep(0.25)
+        response = self.high_level()
+        return response
+
+    def measure(self):
+        self.low_level()
+        time.sleep(0.75)
+        response = self.high_level()
+        return response
+
+    def homing(self):
+        self.low_level()
+        time.sleep(1.25)
+        response = self.high_level()
         return response
 
 
 if __name__ == '__main__':
-    engine_obj = Engine(serial_port="COM6", baud_rate=115200, device_active=True)
+    engine_obj = YAxisEngine(serial_port="COM6", baud_rate=115200, device_active=True)
 
     engine_obj.move(-50.0, 10000)
     engine_obj.move(50.0, 10000)
