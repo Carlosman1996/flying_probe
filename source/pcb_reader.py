@@ -2,6 +2,8 @@ import os
 import pandas as pd
 from kicad.pcbnew import Board
 from kicad.pcbnew import Text
+from utils import DataframeOperations
+
 
 __author__ = "Carlos Manuel Molina Sotoca"
 __email__ = "cmmolinas01@gmail.com"
@@ -49,8 +51,13 @@ if __name__ == "__main__":
     file_path = "//usr//share//kicad//demos//pic_programmer//pic_programmer.kicad_pcb"
     pcb = PCB(file_path)
 
-    print(pcb.read_vias())
-    print(pcb.read_tracks())
-    print(pcb.read_texts())
-    print(pcb.read_modules())
-    print(pcb.read_zones())
+    vias_df = pcb.read_vias()
+    DataframeOperations.save_csv(vias_df, "..\\assets\\PCB\\pic_programmer\\API_info\\vias_df.csv")
+    tracks_df = pcb.read_tracks()
+    DataframeOperations.save_csv(tracks_df, "..\\assets\\PCB\\pic_programmer\\API_info\\tracks_df.csv")
+    texts_df = pcb.read_texts()
+    DataframeOperations.save_csv(texts_df, "..\\assets\\PCB\\pic_programmer\\API_info\\texts_df.csv")
+    modules_df = pcb.read_modules()
+    DataframeOperations.save_csv(modules_df, "..\\assets\\PCB\\pic_programmer\\API_info\\modules_df.csv")
+    zones_df = pcb.read_zones()
+    DataframeOperations.save_csv(zones_df, "..\\assets\\PCB\\pic_programmer\\API_info\\zones_df.csv")
