@@ -131,3 +131,5 @@ dmypy.json
 # PARTICULAR RESTRICTIONS
 .idea/
 docs/
+!docs/software/flowcharts.drawio
+tools/
