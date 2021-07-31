@@ -28,6 +28,9 @@ class SerialPortController:
                         f"Error information: {str(exception)}")
 
     def create_connection(self):
+        # If the device is in test mode, the session parameter will be None:
+        session = None
+
         # If the device is set to active, initialize session:
         if self.device_active:
             # Create serial port connection (session).
@@ -35,10 +38,6 @@ class SerialPortController:
                 session = serial.Serial(port="COM6", baudrate=115200)
             except Exception as exception:
                 self.exception_handler(exception)
-
-        # If the device is in test mode, set the return parameters to None:
-        else:
-            session = None
 
         time.sleep(self.INITIALIZATION_DELAY_TIME)
         return session
@@ -74,78 +73,118 @@ class SerialPortController:
         if self.device_active:
             self.session.close()
 
+    @staticmethod
+    def check_command_response(func):
+        """ Decorator that controls the MARLIN responses. """
+        def wrap(*args, **kwargs):
+            response = func(*args, **kwargs)
 
-class XAxisEngine(SerialPortController):
-    def __init__(self, serial_port, baud_rate=115200, device_active=True):
+            if response != "OK\nOK\n\n":
+                raise Exception("ENGINES CONTROLLER ERROR\n"
+                                "Error information: Response must contain two 'OK' in different lines. The string read"
+                                f"is: {response}")
+        return wrap
+
+
+class XAxisEngine:
+    def __init__(self, serial_port_ctrl):
+        # General attributes:
+        self.serial_port_ctrl = serial_port_ctrl
+
+    @SerialPortController.check_command_response
+    def move(self, probe, movement, speed):
+        response = self.serial_port_ctrl.send_command(f"{probe}")
+        return response
+
+
+class YAxisEngine:
+    def __init__(self, serial_port_ctrl):
+        # General attributes:
+        self.serial_port_ctrl = serial_port_ctrl
+
+    @SerialPortController.check_command_response
+    def move(self, probe, movement, speed):
+        response = self.serial_port_ctrl.send_command(f"G{probe}91Y{movement}F{speed}")
+        return response
+
+    @SerialPortController.check_command_response
+    def homing(self, probe):
+        response = self.serial_port_ctrl.send_command(f"G{probe}28 X0 Y0 Z0")
+        return response
+
+
+class ZAxisEngine:
+    def __init__(self, serial_port_ctrl):
+        # General attributes:
+        self.serial_port_ctrl = serial_port_ctrl
+
+        # Define commands time constants:
+        self.calibration_command_time = 0.25
+        self.measurement_command_time = 0.75
+        self.homing_command_time = 1.25
+
+    @SerialPortController.check_command_response
+    def low_level(self, probe):
+        response = self.serial_port_ctrl.send_command(f"M{probe}4")
+        return response
+
+    @SerialPortController.check_command_response
+    def high_level(self, probe):
+        response = self.serial_port_ctrl.send_command(f"M{probe}5")
+        return response
+
+    def calibration(self, probe):
+        self.low_level(probe)
+        time.sleep(self.calibration_command_time)
+        self.high_level(probe)
+
+    def measure(self, probe):
+        self.low_level(probe)
+        time.sleep(self.measurement_command_time)
+        self.high_level(probe)
+
+    def homing(self, probe):
+        self.low_level(probe)
+        time.sleep(self.homing_command_time)
+        self.high_level(probe)
+
+
+class EnginesController:
+    def __init__(self, serial_port, baud_rate=115200, devices_active=True):
+        # General attributes:
         self.serial_port = serial_port
         self.baud_rate = baud_rate
-        self.device_active = device_active
+        self.devices_active = devices_active
+        self.x_axis_ctrl = None
+        self.y_axis_ctrl = None
+        self.z_axis_ctrl = None
 
-        # Serial port controller:
-        super().__init__(self.serial_port, self.baud_rate, device_active)
+        # Initialize serial port controller:
+        self.serial_port_ctrl = SerialPortController(self.serial_port, self.baud_rate, devices_active)
 
+    def initialize(self):
+        # Initialize X axis engine controller:
+        self.x_axis_ctrl = XAxisEngine(self.serial_port_ctrl)
 
-class YAxisEngine(SerialPortController):
-    def __init__(self, serial_port, baud_rate=115200, device_active=True):
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
-        self.device_active = device_active
+        # Initialize Y axis engine controller:
+        self.y_axis_ctrl = YAxisEngine(self.serial_port_ctrl)
 
-        # Serial port controller:
-        super().__init__(self.serial_port, self.baud_rate, device_active)
+        # Initialize Z axis engine controller:
+        self.z_axis_ctrl = ZAxisEngine(self.serial_port_ctrl)
 
-    def move(self, movement, speed):
-        response = self.send_command(f"G91Y{movement}F{speed}")
-        return response
-
-    def homing(self):
-        response = self.send_command(f"G28 X0 Y0 Z0")
-        return response
-
-
-class ZAxisEngine(SerialPortController):
-    def __init__(self, serial_port, baud_rate=115200, device_active=True):
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
-        self.device_active = device_active
-
-        # Serial port controller:
-        super().__init__(self.serial_port, self.baud_rate, device_active)
-
-    def low_level(self):
-        response = self.send_command(f"M4")
-        return response
-
-    def high_level(self):
-        response = self.send_command(f"M5")
-        return response
-
-    def calibration(self):
-        self.low_level()
-        time.sleep(0.25)
-        response = self.high_level()
-        return response
-
-    def measure(self):
-        self.low_level()
-        time.sleep(0.75)
-        response = self.high_level()
-        return response
-
-    def homing(self):
-        self.low_level()
-        time.sleep(1.25)
-        response = self.high_level()
-        return response
+    def close(self):
+        # Close serial port controller:
+        self.serial_port_ctrl.close_connection()
 
 
 if __name__ == '__main__':
-    engine_obj = YAxisEngine(serial_port="COM6", baud_rate=115200, device_active=True)
+    engines_ctrl = EnginesController(serial_port="COM6", baud_rate=115200, devices_active=False)
+    engines_ctrl.initialize()
 
-    engine_obj.move(-50.0, 10000)
-    engine_obj.move(50.0, 10000)
-    engine_obj.move(-100.0, 10000)
-    engine_obj.move(200.0, 10000)
-    engine_obj.move(-100.0, 10000)
+    engines_ctrl.y_axis_ctrl.move("", -50.0, 10000)
+    engines_ctrl.y_axis_ctrl.move("", 50.0, 10000)
+    engines_ctrl.y_axis_ctrl.move("", -100.0, 10000)
+    engines_ctrl.y_axis_ctrl.move("", 200.0, 10000)
+    engines_ctrl.y_axis_ctrl.move("", -100.0, 10000)
 
-    engine_obj.close_connection()
+    engines_ctrl.close()

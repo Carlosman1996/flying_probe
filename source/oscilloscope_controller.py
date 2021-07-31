@@ -43,8 +43,8 @@ class VISAController:
             if session.resource_name.startswith('ASRL') or session.resource_name.endswith('SOCKET'):
                 session.read_termination = '\n'
 
-            # Set huge timeout for ADC reading:
-            session.timeout = 10000
+            # Set response timeout:
+            session.timeout = 10
         # If the device is in test mode, set the return parameters to None:
         return resource_manager, session
 
@@ -72,7 +72,9 @@ class VISAController:
             self.resource_manager.close()
 
 
-class OwonVDS1022(VISAController):
+class OscilloscopeController(VISAController):
+    """Methods implemented for the oscilloscope OWON VDS1022"""
+
     def __init__(self, port=5188, device_active=True):
         # Oscilloscope attributes:
         self.address = f"TCPIP0::127.0.0.1::{port}::SOCKET"
@@ -187,8 +189,6 @@ class OwonVDS1022(VISAController):
         self.send_command(f":TRIGGER:SINGLE:EDGE:SLOPE {slope}")
 
     def set_trigger_level(self, channel, level=0.0):
-        self.send_command(f":TRIGGER:SINGLE:EDGE:SOURCE CH{str(channel)}")
-
         vertical_scale = float(self.send_command(f":CHANNEL{channel}:SCALE?"))
         self.send_command(f":TRIGGER:SINGLE:EDGE:LEVEL {self.convert_value_to_pixels(vertical_scale, 0, level)}")
 
@@ -238,13 +238,8 @@ class OwonVDS1022(VISAController):
     def get_waveform(self, channel):
         return self.send_command(f"*ADC? CH{channel}")  # TODO: This method does not work: list of values is not read.
 
-    def initialize(self, configuration_dicts):
+    def initialize(self):
         """ initialize(self, list) """
-        # Check if channel is available:
-        for configuration_dict in configuration_dicts:
-            if configuration_dict["channel"] not in self.channels:
-                raise Exception("Channel is not valid. Available channels are 1 and 2.")
-
         # Disable all channels:
         for channel in self.channels:
             self.set_channel_state(channel, "OFF")
@@ -255,20 +250,14 @@ class OwonVDS1022(VISAController):
         # Configure acquire:
         self.set_acquire()
 
-        # Configure oscilloscope channels:
-        for channel_conf_dict in configuration_dicts:
-            # Configure channel:
-            self.set_configure_edge_trigger(channel_conf_dict["channel"], "AUTO",
-                                            channel_conf_dict["trigger_edge_slope"])
-
-            # Configure probe:
-            self.set_probe_configuration(channel_conf_dict["coupling"], channel_conf_dict["probe_attenuation"])
-
     def measure(self, inputs_dict):
         """ measure(self, dict) """
         # Check if channel is available:
         if inputs_dict["channel"] not in self.channels:
             raise Exception("Channel is not valid. Available channels are 1 and 2.")
+
+        # Configure probe:
+        self.set_probe_configuration(inputs_dict["channel"], inputs_dict["coupling"], inputs_dict["probe_attenuation"])
 
         # Set timebase:
         if inputs_dict["frequency"] == 0:
@@ -287,6 +276,7 @@ class OwonVDS1022(VISAController):
         self.set_channel_state(inputs_dict["channel"], "ON")
 
         # Configure trigger:
+        self.set_configure_edge_trigger(inputs_dict["channel"], "AUTO", inputs_dict["trigger_edge_slope"])
         trigger_level = (inputs_dict["signal_max_value"] - inputs_dict["signal_min_value"]) / 2
         self.set_trigger_level(inputs_dict["channel"], trigger_level)
 
@@ -311,17 +301,16 @@ class OwonVDS1022(VISAController):
 
 
 if __name__ == '__main__':
-    osc_obj = OwonVDS1022(port=5188, device_active=True)
+    osc_obj = OscilloscopeController(port=5188, device_active=False)
 
     # Initialize oscilloscope:
-    configuration_inputs = [{"channel": 1,
-                             "trigger_edge_slope": "FALL",
-                             "coupling": "DC",
-                             "probe_attenuation": "X10"}]     # Configuration per channel
-    osc_obj.initialize(configuration_inputs)
+    osc_obj.initialize()
 
     # Perform measurement:
     measurement_inputs = {"channel": 1,
+                          "trigger_edge_slope": "FALL",
+                          "coupling": "DC",
+                          "probe_attenuation": "X10",
                           "signal_max_value": 5,
                           "signal_min_value": 0,
                           "frequency": 10000000,
