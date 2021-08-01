@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 
 
@@ -15,9 +14,9 @@ class FileOperations:
 class DataframeOperations:
     @staticmethod
     def save_csv(dataframe, file_path):
-        dataframe.to_csv(file_path, sep=';', encoding='utf-8', index=False)
+        dataframe.to_csv(file_path, sep=',', encoding='utf-8', index=False)
 
     @staticmethod
     def read_csv(file_path):
-        df = pd.read_csv(file_path, sep=';', encoding='utf-8')
+        df = pd.read_csv(file_path, sep=',', encoding='utf-8')
         return df
