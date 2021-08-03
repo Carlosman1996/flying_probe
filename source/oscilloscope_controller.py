@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 import pyvisa as visa
 
+
 random.seed(str(datetime.now()))
 
 

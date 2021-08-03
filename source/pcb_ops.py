@@ -9,13 +9,15 @@ from shapely.geometry.polygon import Polygon
 
 # from kicad.pcbnew import Board
 # from kicad.pcbnew import Text
-from utils import DataframeOperations
+from source.utils import DataframeOperations
 
-__author__ = "Carlos Manuel Molina Sotoca"
-__email__ = "cmmolinas01@gmail.com"
 
 pd.set_option('display.max_rows', None, 'display.max_columns', None)
 FILE_DIRECTORY = Path(os.path.dirname(os.path.abspath(__file__)))
+
+
+__author__ = "Carlos Manuel Molina Sotoca"
+__email__ = "cmmolinas01@gmail.com"
 
 
 class PCBMapping:
@@ -64,7 +66,16 @@ class PCBMapping:
 
             for key, item in processed_column.items():
                 if type(item) == str:
-                    processed_column[key] = json.loads(item)
+                    coordinates = json.loads(item)
+                    for index_particular_coords, particular_coords in enumerate(coordinates):
+                        # Placement outline (list of lists):
+                        if type(particular_coords) == list:
+                            for index_point_coords, point_coords in enumerate(particular_coords):
+                                coordinates[index_particular_coords][index_point_coords] /= 1000
+                        # Position (list):
+                        else:
+                            coordinates[index_particular_coords] /= 1000
+                    processed_column[key] = coordinates
             return processed_column
 
         pcb_info_df = DataframeOperations.read_csv(self.pcb_path)
@@ -78,15 +89,10 @@ class PCBMapping:
 
 
 class TestPointsSelector:
-    def __init__(self):
+    def __init__(self, probes_configuration):
         # Hardcoded values
-        self.probes = {"1": {"inclination": 0,  # degrees
-                             "diameter": 0.005},
-                       "2": {"inclination": 12,  # degrees
-                             "diameter": 0.005},
-                       "3": {"inclination": -12,  # degrees
-                             "diameter": 0.005}}
-        self.minimum_distance_error = 0.005
+        self.probes = probes_configuration
+        self.minimum_distance_error = 0.001
         self.test_point_surface_number_layers = 3
         self.test_point_surface_number_points = 12
 
@@ -114,7 +120,7 @@ class TestPointsSelector:
         # Calculate minimum distance:
         if component_x_axis:
             try:
-                minimum_distance = component_height / math.tan(abs(probe_inclination))
+                minimum_distance = component_height / math.tan(abs(probe_inclination) * math.pi / 180)
             except ZeroDivisionError:
                 minimum_distance = 0
         else:
@@ -140,22 +146,22 @@ class TestPointsSelector:
                     if side_index == 0:
                         x_coordinate = test_point_coordinates[0] + minimum_distance / 2
                         y_coordinate = test_point_coordinates[1] - minimum_distance / 2 + \
-                            minimum_distance * point_index / number_points_per_side
+                            minimum_distance * (point_index + 1) / number_points_per_side
                     elif side_index == 1:
                         x_coordinate = test_point_coordinates[0] + minimum_distance / 2 - \
-                            minimum_distance * point_index / number_points_per_side
+                            minimum_distance * (point_index + 1) / number_points_per_side
                         y_coordinate = test_point_coordinates[1] + minimum_distance / 2
                     elif side_index == 2:
                         x_coordinate = test_point_coordinates[0] - minimum_distance / 2
                         y_coordinate = test_point_coordinates[1] + minimum_distance / 2 - \
-                            minimum_distance * point_index / number_points_per_side
+                            minimum_distance * (point_index + 1) / number_points_per_side
                     else:
                         x_coordinate = test_point_coordinates[0] - minimum_distance / 2 + \
-                            minimum_distance * point_index / number_points_per_side
+                            minimum_distance * (point_index + 1) / number_points_per_side
                         y_coordinate = test_point_coordinates[1] - minimum_distance / 2
 
-                    points.append([x_coordinate * layer_index / self.test_point_surface_number_layers,
-                                   y_coordinate * layer_index / self.test_point_surface_number_layers])
+                    points.append([x_coordinate * (layer_index + 1) / self.test_point_surface_number_layers,
+                                   y_coordinate * (layer_index + 1) / self.test_point_surface_number_layers])
         return points
 
     def get_usable_probes(self, test_point_position, test_point_width, components_df):
@@ -172,6 +178,7 @@ class TestPointsSelector:
                                                                              probe_parameters["diameter"],
                                                                              component["shape_coordinates"],
                                                                              component["height"])
+                print(minimum_distance)
 
                 # Create a point cloud around the test point centre of coordinates:
                 test_point_surface_points = self.create_test_point_surface_points(test_point_position, minimum_distance)
@@ -187,6 +194,7 @@ class TestPointsSelector:
 
                 # If any point of the test point theoretical surface is inside the component, the probe cannot be used:
                 if not is_probe_usable:
+                    usable_probes = None
                     break
 
             # The probe can be used to measure test point:
@@ -203,10 +211,14 @@ class TestPointsSelector:
         test_points_df = test_points_df[test_points_df["net_name"].isin(user_nets)]
 
         # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
-        test_points_df["probes_usable"] = \
-            test_points_df.apply(lambda test_point: self.get_usable_probes(test_point["position"],
-                                                                           test_point["diameter"],
-                                                                           components_df), axis=1)
+        if not test_points_df.empty:
+            test_points_df["probes_usable"] = \
+                test_points_df.apply(lambda test_point: self.get_usable_probes(test_point["position"],
+                                                                               test_point["diameter"],
+                                                                               components_df), axis=1)
+
+            # Remove those test points which has not usable probes
+            test_points_df = test_points_df[test_points_df["probes_usable"].notnull()]
         return test_points_df
 
 
@@ -216,7 +228,9 @@ if __name__ == "__main__":
     pcb_obj = PCBMapping(file_path)
     info_df = pcb_obj.run()
 
+    configuration = {"1": {"inclination": 0,
+                           "diameter": 0.005}}
     user_nets_list = {"DATA-RB7": {}}
-    test_points_obj = TestPointsSelector()
+    test_points_obj = TestPointsSelector(configuration)
     tp_selector_result = test_points_obj.run(list(user_nets_list.keys()), info_df)
     print(tp_selector_result)

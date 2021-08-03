@@ -1,8 +1,15 @@
+import os
+from pathlib import Path
 import pytest
 
 from source import engines_controller
 from source import oscilloscope_controller
 from source import probe_controller
+from source.pcb_ops import PCBMapping
+from source.pcb_ops import TestPointsSelector
+
+
+FILE_DIRECTORY = Path(os.path.dirname(os.path.abspath(__file__)))
 
 
 __author__ = "Carlos Manuel Molina Sotoca"
@@ -30,3 +37,20 @@ def probe_inactive(oscilloscope_inactive, engines_inactive):
                                                  oscilloscope_ctrl=oscilloscope_inactive,
                                                  engines_ctrl=engines_inactive)
     return probe_obj
+
+
+@pytest.fixture
+def pcb_pic_programmer_example_info():
+    file_path = str(FILE_DIRECTORY.parent) + "\\assets\\PCB\\pic_programmer\\API_info\\API_info_pcb.csv"
+
+    pcb_obj = PCBMapping(file_path)
+    info_df = pcb_obj.run()
+    return info_df
+
+
+@pytest.fixture
+def test_points_selector():
+    probes_configuration = {"1": {"inclination": 0,  # degrees
+                                  "diameter": 0.001}}
+    test_points_selector_obj = TestPointsSelector(probes_configuration=probes_configuration)
+    return test_points_selector_obj
