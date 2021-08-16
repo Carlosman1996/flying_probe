@@ -41,7 +41,7 @@ def probe_inactive(oscilloscope_inactive, engines_inactive):
 
 @pytest.fixture
 def pcb_pic_programmer_example_info():
-    file_path = str(FILE_DIRECTORY.parent) + "\\assets\\PCB\\pic_programmer\\API_info\\API_info_pcb.csv"
+    file_path = str(FILE_DIRECTORY.parent) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
 
     pcb_obj = PCBMapping(file_path)
     info_df = pcb_obj.run()
@@ -49,8 +49,18 @@ def pcb_pic_programmer_example_info():
 
 
 @pytest.fixture
-def test_points_selector():
+def test_points_selector_one_probe():
     probes_configuration = {"1": {"inclination": 0,  # degrees
+                                  "diameter": 0.001}}
+    test_points_selector_obj = TestPointsSelector(probes_configuration=probes_configuration)
+    return test_points_selector_obj
+
+
+@pytest.fixture
+def test_points_selector_two_probes():
+    probes_configuration = {"1": {"inclination": 0,  # degrees
+                                  "diameter": 0.001},
+                            "2": {"inclination": 12,  # degrees
                                   "diameter": 0.001}}
     test_points_selector_obj = TestPointsSelector(probes_configuration=probes_configuration)
     return test_points_selector_obj

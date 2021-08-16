@@ -92,115 +92,87 @@ class TestPointsSelector:
     def __init__(self, probes_configuration):
         # Hardcoded values
         self.probes = probes_configuration
-        self.minimum_distance_error = 0.001
-        self.test_point_surface_number_layers = 3
-        self.test_point_surface_number_points = 12
+        self.probes_surface_increment = 0.01    # Hardcoded parameter
+        self.min_distance_multiplier = 5    # Hardcoded parameter
 
-    def calculate_component_minimum_distance(self, test_point_position, test_point_width, probe_inclination,
-                                             probe_diameter, component_shape_coordinates, component_height):
-        # The probes inclination only affects in X axis, so components placed above or below the test point do not
-        # affect to movement. Also, components placed at right affect to probes with negative inclination and components
-        # placed at left affect to probes with positive inclination:
-        component_x_axis = False
-        component_x_right_axis = False  # TODO: components placed at right affect to probes with negative inclination.
-        component_y_right_axis = False  # TODO: components placed at left affect to probes with positive inclination.
-        for index, coordinate in enumerate(component_shape_coordinates):
-            if index != 0:
-                last_coordinate = component_shape_coordinates[index - 1]
+    @staticmethod
+    def get_shape_extreme_apexes(shape_coordinates):
+        all_x_coordinates = [point_coords[0] for point_coords in shape_coordinates]
+        all_y_coordinates = [point_coords[1] for point_coords in shape_coordinates]
+        apexes = [[max(all_x_coordinates), max(all_y_coordinates)],
+                  [max(all_x_coordinates), min(all_y_coordinates)],
+                  [min(all_x_coordinates), max(all_y_coordinates)],
+                  [min(all_x_coordinates), min(all_y_coordinates)]]
+        return apexes
 
-                # Check if component is above or below:
-                if coordinate[1] > test_point_position[1] and last_coordinate[1] > test_point_position[1]:
-                    pass
-                elif coordinate[1] < test_point_position[1] and last_coordinate[1] < test_point_position[1]:
-                    pass
-                else:
-                    component_x_axis = True
-                    break
+    @staticmethod
+    def get_tp_extreme_apexes(position, diameter):
+        apexes = [[position[0] + diameter / 2, position[1] + diameter / 2],
+                  [position[0] + diameter / 2, position[1] - diameter / 2],
+                  [position[0] - diameter / 2, position[1] + diameter / 2],
+                  [position[0] - diameter / 2, position[1] - diameter / 2]]
+        return apexes
 
-        # Calculate minimum distance:
-        if component_x_axis:
-            try:
-                minimum_distance = component_height / math.tan(abs(probe_inclination) * math.pi / 180)
-            except ZeroDivisionError:
-                minimum_distance = 0
-        else:
-            minimum_distance = 0
-        minimum_distance += probe_diameter / 2 + self.minimum_distance_error
+    @staticmethod
+    def calculate_distance_between_points(point_1, point_2):
+        distance = math.sqrt((point_2[0] - point_1[0])**2 + (point_2[1] - point_1[1])**2)
+        return distance
 
-        # The probe can be placed at any point of the pad, so the half of the test point width must be added to the
-        # minimum distance (worst case - the current distance is referred to the centre of the test point):
-        minimum_distance += test_point_width / 2
+    def get_minimum_distance(self, tp_position, component_apexes):
+        minimum_distance = float('inf')
+        for point in component_apexes:
+            distance = self.calculate_distance_between_points(tp_position, point)
+            if distance < minimum_distance:
+                minimum_distance = distance
         return minimum_distance
 
-    def create_test_point_surface_points(self, test_point_coordinates, minimum_distance):
-        points = []
+    def get_probe_projection(self, test_point_position, shape, thickness, inclination, component_height):
+        # TODO: calculate projection over XY axis
+        shape = [[test_point_position[0] + self.probes_surface_increment,
+                  test_point_position[1] + self.probes_surface_increment],
+                 [test_point_position[0] - self.probes_surface_increment,
+                  test_point_position[1] + self.probes_surface_increment],
+                 [test_point_position[0] - self.probes_surface_increment,
+                  test_point_position[1] - self.probes_surface_increment],
+                 [test_point_position[0] + self.probes_surface_increment,
+                  test_point_position[1] - self.probes_surface_increment]]
+        return shape
 
-        # Create points list:
-        number_points_per_side = int(self.test_point_surface_number_points / 4)
-        # Iterate per number layer:
-        for layer_index in range(self.test_point_surface_number_layers):
-            # The pad is supposed to be a square area to simplify code. Iterate per square side:
-            for side_index in range(4):
-                # Iterate over the number of points per layer:
-                for point_index in range(number_points_per_side):
-                    if side_index == 0:
-                        x_coordinate = test_point_coordinates[0] + minimum_distance / 2
-                        y_coordinate = test_point_coordinates[1] - minimum_distance / 2 + \
-                            minimum_distance * (point_index + 1) / number_points_per_side
-                    elif side_index == 1:
-                        x_coordinate = test_point_coordinates[0] + minimum_distance / 2 - \
-                            minimum_distance * (point_index + 1) / number_points_per_side
-                        y_coordinate = test_point_coordinates[1] + minimum_distance / 2
-                    elif side_index == 2:
-                        x_coordinate = test_point_coordinates[0] - minimum_distance / 2
-                        y_coordinate = test_point_coordinates[1] + minimum_distance / 2 - \
-                            minimum_distance * (point_index + 1) / number_points_per_side
-                    else:
-                        x_coordinate = test_point_coordinates[0] - minimum_distance / 2 + \
-                            minimum_distance * (point_index + 1) / number_points_per_side
-                        y_coordinate = test_point_coordinates[1] - minimum_distance / 2
-
-                    points.append([x_coordinate * (layer_index + 1) / self.test_point_surface_number_layers,
-                                   y_coordinate * (layer_index + 1) / self.test_point_surface_number_layers])
-        return points
-
-    def get_usable_probes(self, test_point_position, test_point_width, components_df):
-        usable_probes = []
+    def add_probes_to_test_points_dataframe(self, test_points_df):
+        tps_per_probe_frames = []
 
         for probe_key, probe_parameters in self.probes.items():
-            is_probe_usable = True
-            for index, component in components_df.iterrows():
-                # Calculate the minimum distance necessary between the test point and the components to avoid a probe
-                # collision in the measurement process:
-                minimum_distance = self.calculate_component_minimum_distance(test_point_position,
-                                                                             test_point_width,
-                                                                             probe_parameters["inclination"],
-                                                                             probe_parameters["diameter"],
-                                                                             component["shape_coordinates"],
-                                                                             component["height"])
-                print(minimum_distance)
+            test_points_df["probe"] = probe_key
+            tps_per_probe_frames.append(test_points_df.copy())
+        test_points_df = pd.concat(tps_per_probe_frames).reset_index()
+        return test_points_df
 
-                # Create a point cloud around the test point centre of coordinates:
-                test_point_surface_points = self.create_test_point_surface_points(test_point_position, minimum_distance)
-                for test_point_surface_point in test_point_surface_points:
-                    # Define shapely point:
-                    point = Point(*test_point_surface_point)
-                    # Define shapely polygon:
-                    polygon = Polygon(component["shape_coordinates"])
-                    # Check if point is inside the polygon:
-                    if polygon.contains(point):
-                        is_probe_usable = False
-                        break
+    def check_probe_in_tp(self, test_point, components_df):
+        # Calculate an approximated minimum distance between all components and the current test point:
+        components_df["minimum_distance"] = \
+            components_df.apply(lambda component: self.get_minimum_distance(test_point["position"],
+                                                                            component["extreme_apexes"]), axis=1)
 
-                # If any point of the test point theoretical surface is inside the component, the probe cannot be used:
-                if not is_probe_usable:
-                    usable_probes = None
-                    break
+        # Select components close to the test point:
+        # TODO: valid components can be filtered. Eg: test points inside placement outlines or components with L shape.
+        components_df = components_df[components_df["minimum_distance"] <
+                                      self.probes_surface_increment * self.min_distance_multiplier]
 
-            # The probe can be used to measure test point:
-            if is_probe_usable:
-                usable_probes.append(probe_key)
-        return usable_probes
+        # Iterate over each component:
+        for index, component in components_df.iterrows():
+            # Calculate the probe shape at height equal to the component height.
+            probe_shape = self.get_probe_projection(test_point["position"], None, None, None, None)
+
+            # Define shapely polygon for probe shape:
+            probe_polygon = Polygon(probe_shape)
+            # Define shapely polygon for component shape:
+            component_polygon = Polygon(component["shape_coordinates"])
+
+            # Check intersection between polygons:
+            intersection = probe_polygon.intersects(component_polygon)
+            if intersection:
+                return False
+        return True
 
     def run(self, user_nets, pcb_info_df):
         # Separate vias and placement outlines in different dataframes:
@@ -212,24 +184,42 @@ class TestPointsSelector:
 
         # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
         if not test_points_df.empty:
-            test_points_df["probes_usable"] = \
-                test_points_df.apply(lambda test_point: self.get_usable_probes(test_point["position"],
-                                                                               test_point["diameter"],
-                                                                               components_df), axis=1)
+            # Add all probes to test points: duplicate each test point depending on the probe
+            test_points_df = self.add_probes_to_test_points_dataframe(test_points_df)
+
+            # # Calculate extreme apexes of each test point:
+            # test_points_df["extreme_apexes"] = \
+            #     test_points_df.apply(lambda test_point: self.get_tp_extreme_apexes(test_point["position"],
+            #                                                                        test_point["diameter"]), axis=1)
+
+            # Calculate extreme apexes of each component:
+            components_df["extreme_apexes"] = \
+                components_df.apply(lambda component:
+                                    self.get_shape_extreme_apexes(component["shape_coordinates"]), axis=1)
+
+            # Check if probe can be used:
+            test_points_df["probe_usable"] = \
+                test_points_df.apply(lambda test_point: self.check_probe_in_tp(test_point,
+                                                                               components_df.copy()), axis=1)
 
             # Remove those test points which has not usable probes
-            test_points_df = test_points_df[test_points_df["probes_usable"].notnull()]
+            test_points_df = test_points_df[test_points_df.probe_usable]
         return test_points_df
 
 
 if __name__ == "__main__":
-    file_path = str(FILE_DIRECTORY.parent) + "\\assets\\PCB\\pic_programmer\\API_info\\API_info_pcb.csv"
-
+    file_path = str(FILE_DIRECTORY.parent) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
     pcb_obj = PCBMapping(file_path)
     info_df = pcb_obj.run()
 
     configuration = {"1": {"inclination": 0,
-                           "diameter": 0.005}}
+                           "diameter": 0.005,
+                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]},
+                     "2": {"inclination": 12,
+                           "diameter": 0.005,
+                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
     user_nets_list = {"DATA-RB7": {}}
     test_points_obj = TestPointsSelector(configuration)
     tp_selector_result = test_points_obj.run(list(user_nets_list.keys()), info_df)
