@@ -12,9 +12,8 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class TestPointsSelector:
-    def __init__(self, probes_configuration):
+    def __init__(self):
         # Hardcoded values
-        self.probes = probes_configuration
         self.probes_surface_increment = 0.01    # Hardcoded parameter
         self.min_distance_multiplier = 5    # Hardcoded parameter
 
@@ -61,10 +60,10 @@ class TestPointsSelector:
                   test_point_position[1] - self.probes_surface_increment]]
         return shape
 
-    def add_probes_to_test_points_dataframe(self, test_points_df):
+    def add_probes_to_test_points_dataframe(self, probes_conf, test_points_df):
         tps_per_probe_frames = []
 
-        for probe_key, probe_parameters in self.probes.items():
+        for probe_key, probe_parameters in probes_conf.items():
             test_points_df["probe"] = probe_key
             tps_per_probe_frames.append(test_points_df.copy())
         test_points_df = pd.concat(tps_per_probe_frames).reset_index()
@@ -97,7 +96,7 @@ class TestPointsSelector:
                 return False
         return True
 
-    def run(self, user_nets, pcb_info_df):
+    def run(self, probes_conf, user_nets, pcb_info_df):
         # Separate vias and placement outlines in different dataframes:
         test_points_df = pcb_info_df[pcb_info_df["type"] == "via"].copy()
         components_df = pcb_info_df[pcb_info_df["type"] == "placement_outline"].copy()
@@ -108,7 +107,7 @@ class TestPointsSelector:
         # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
         if not test_points_df.empty:
             # Add all probes to test points: duplicate each test point depending on the probe
-            test_points_df = self.add_probes_to_test_points_dataframe(test_points_df)
+            test_points_df = self.add_probes_to_test_points_dataframe(probes_conf, test_points_df)
 
             # Calculate extreme apexes of each component:
             components_df["extreme_apexes"] = \
@@ -140,6 +139,6 @@ if __name__ == "__main__":
                            "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
                                      [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
     user_nets_list = {"DATA-RB7": {}}
-    test_points_obj = TestPointsSelector(configuration)
-    tp_selector_result = test_points_obj.run(list(user_nets_list.keys()), info_df)
+    test_points_obj = TestPointsSelector()
+    tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), info_df)
     print(tp_selector_result)

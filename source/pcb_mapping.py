@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
-from source import utils
+from source.utils import ROOT_PATH
 from source.utils import FileOperations
 from source.utils import DataframeOperations
 
@@ -15,8 +15,8 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class PCBMapping:
-    def __init__(self, pcb_path):
-        if not FileOperations.check_file_exists:
+    def __init__(self, pcb_path=ROOT_PATH + "//inputs//pcb_file.kicad_pcb"):
+        if not FileOperations.check_file_exists(pcb_path):
             raise Exception("KiCAD PCB file path cannot be found.")
         self.pcb_path = pcb_path  # File path must be a "kicad_pcb" type.
         # self.board = Board.from_file(pcb_path)
@@ -83,7 +83,7 @@ class PCBMapping:
 
 
 if __name__ == "__main__":
-    file_path = str(utils.ROOT_PATH) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
+    file_path = ROOT_PATH + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
     pcb_obj = PCBMapping(file_path)
     info_df = pcb_obj.run()
     print(info_df)

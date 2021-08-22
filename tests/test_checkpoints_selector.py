@@ -14,11 +14,13 @@ __email__ = "cmmolinas01@gmail.com"
                         (["DATA-RB7"], 0.005, 2, 1)
 
 ])
-def test_pcb_pic_programmer_example_one_probe(test_points_selector_one_probe, pcb_pic_programmer_example_info,
+def test_pcb_pic_programmer_example_one_probe(test_points_selector, pcb_pic_programmer_example_info,
                                               user_inputs, probe_thickness, general_expected_result,
                                               pads_expected_result):
-    test_points_selector_one_probe.probes_surface_increment = probe_thickness
-    tp_selector_result = test_points_selector_one_probe.run(user_inputs, pcb_pic_programmer_example_info)
+    probes_configuration = {"1": {"inclination": 0,  # degrees
+                                  "diameter": 0.001}}
+    test_points_selector.probes_surface_increment = probe_thickness
+    tp_selector_result = test_points_selector.run(probes_configuration, user_inputs, pcb_pic_programmer_example_info)
 
     # Check test point selector results:
     assert len(tp_selector_result) == general_expected_result, f"The method must return {general_expected_result} " \
@@ -37,11 +39,15 @@ def test_pcb_pic_programmer_example_one_probe(test_points_selector_one_probe, pc
                         (["DATA-RB7"], 0.005, 4, 1)
 
 ])
-def test_pcb_pic_programmer_example_two_probes(test_points_selector_two_probes, pcb_pic_programmer_example_info,
+def test_pcb_pic_programmer_example_two_probes(test_points_selector, pcb_pic_programmer_example_info,
                                                user_inputs, probe_thickness, general_expected_result,
                                                pads_expected_result):
-    test_points_selector_two_probes.probes_surface_increment = probe_thickness
-    tp_selector_result = test_points_selector_two_probes.run(user_inputs, pcb_pic_programmer_example_info)
+    probes_configuration = {"1": {"inclination": 0,  # degrees
+                              "diameter": 0.001},
+                        "2": {"inclination": 12,  # degrees
+                              "diameter": 0.001}}
+    test_points_selector.probes_surface_increment = probe_thickness
+    tp_selector_result = test_points_selector.run(probes_configuration, user_inputs, pcb_pic_programmer_example_info)
 
     # Check test point selector results:
     assert len(tp_selector_result) == general_expected_result, f"The method must return {general_expected_result} " \

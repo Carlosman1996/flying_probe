@@ -1,0 +1,21 @@
+{
+    "DATA-RB6":
+    {
+        "trigger_edge_slope": "RISE",
+        "coupling": "DC",
+        "probe_attenuation": "X10",
+        "signal_max_value": 5,
+        "signal_min_value": 0,
+        "frequency": 1000,
+        "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]
+    },
+    "DATA-RB7":
+    {
+        "coupling": "AC",
+        "probe_attenuation": "X10",
+        "signal_max_value": 5,
+        "signal_min_value": 0,
+        "frequency": 1000,
+        "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]
+    }
+}

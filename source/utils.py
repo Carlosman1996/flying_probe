@@ -1,4 +1,5 @@
-from os import path
+import os
+import glob
 from pathlib import Path
 import pandas as pd
 import json
@@ -10,34 +11,52 @@ __author__ = "Carlos Manuel Molina Sotoca"
 __email__ = "cmmolinas01@gmail.com"
 
 
-ROOT_PATH = str(Path(path.dirname(path.realpath(__file__))).parent)
+ROOT_PATH = str(Path(os.path.dirname(os.path.realpath(__file__))).parent)
+
+
+class DirectoryOperations:
+    @staticmethod
+    def check_dir_exists(dir_path):
+        if os.path.isdir(dir_path):
+            return True
+        else:
+            raise Exception("Directory does not exist.")
+
+    @staticmethod
+    def search_last_dir(dir_path):
+        DirectoryOperations.check_dir_exists(dir_path)
+        return max(glob.glob(os.path.join(dir_path, '*/')), key=os.path.getmtime)
 
 
 class FileOperations:
     @staticmethod
     def check_file_exists(file_path):
-        if path.isfile(file_path):
+        if os.path.isfile(file_path):
             return True
         else:
             raise Exception("File does not exist.")
 
-    def read_text_file(self, file_path):
-        self.check_file_exists(file_path)
+    @staticmethod
+    def get_file_name(file_path):
+        return os.path.basename(file_path)
+
+    @staticmethod
+    def read_file(file_path):
+        FileOperations.check_file_exists(file_path)
         with open(file_path, 'r') as file_obj:
             file_content = file_obj.read()
         return file_content
 
-    def write_text_file(self, file_path, string):
-        self.check_file_exists(file_path)
+    @staticmethod
+    def write_file(file_path, string):
         with open(file_path, 'w') as file_obj:
-            file_content = file_obj.write(string)
-        return file_content
+            file_obj.write(string)
 
-    def append_text_file(self, file_path, string):
-        self.check_file_exists(file_path)
+    @staticmethod
+    def append_text_file(file_path, string):
+        FileOperations.check_file_exists(file_path)
         with open(file_path, 'a') as file_obj:
-            file_content = file_obj.write(string)
-        return file_content
+            file_obj.write(string)
 
 
 class JSONFileOperations:
@@ -46,6 +65,11 @@ class JSONFileOperations:
         FileOperations.check_file_exists(file_path)
         with open(file_path, 'r') as json_obj:
             return json.loads(json_obj.read())
+
+    @staticmethod
+    def write_file(file_path, string):
+        with open(file_path, 'w') as json_obj:
+            json.dump(string, json_obj, indent=4)
 
     @staticmethod
     def validate_data_schema_dict(json_data, data_schema):
@@ -72,7 +96,7 @@ class JSONFileOperations:
 
 class DataframeOperations:
     @staticmethod
-    def save_csv(dataframe, file_path):
+    def save_csv(file_path, dataframe):
         dataframe.to_csv(file_path, sep=',', encoding='utf-8', index=False)
 
     @staticmethod

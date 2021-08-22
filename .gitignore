@@ -134,3 +134,5 @@ docs/
 !docs/software/flowcharts.drawio
 tools/
 assets/
+inputs/
+outputs/
