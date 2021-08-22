@@ -133,3 +133,4 @@ dmypy.json
 docs/
 !docs/software/flowcharts.drawio
 tools/
+assets/

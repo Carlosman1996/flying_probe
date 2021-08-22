@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 import pyvisa as visa
 
+
 random.seed(str(datetime.now()))
 
 
@@ -149,7 +150,7 @@ class OscilloscopeController(VISAController):
              1s | 2s | 5s | 10s | 20s | 50s | 100s}
         """
         self.send_command(f":TIMEBASE:SCALE {scale}")
-        self.send_command(f":TIMEBASE:HOFFSET 0")
+        self.send_command(":TIMEBASE:HOFFSET 0")
 
     def set_channel_state(self, channel, state):
         """
@@ -184,7 +185,7 @@ class OscilloscopeController(VISAController):
             {RISE | FALL}
         """
         self.send_command(f":TRIGGER:MODE {mode}")
-        self.send_command(f":TRIGGER:SINGLE EDGE")
+        self.send_command(":TRIGGER:SINGLE EDGE")
         self.send_command(f":TRIGGER:SINGLE:EDGE:SOURCE CH{str(channel)}")
         self.send_command(f":TRIGGER:SINGLE:EDGE:SLOPE {slope}")
 

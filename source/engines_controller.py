@@ -76,28 +76,17 @@ class SerialPortController:
     @staticmethod
     def check_command_response(func):
         """ Decorator that controls the MARLIN responses. """
-        def wrap(*args, **kwargs):
+        def check_command_response_wrapper(*args, **kwargs):
             response = func(*args, **kwargs)
 
             if response != "OK\nOK\n\n":
                 raise Exception("ENGINES CONTROLLER ERROR\n"
                                 "Error information: Response must contain two 'OK' in different lines. The string read"
                                 f"is: {response}")
-        return wrap
+        return check_command_response_wrapper
 
 
 class XAxisEngine:
-    def __init__(self, serial_port_ctrl):
-        # General attributes:
-        self.serial_port_ctrl = serial_port_ctrl
-
-    @SerialPortController.check_command_response
-    def move(self, probe, movement, speed):
-        response = self.serial_port_ctrl.send_command(f"{probe}")
-        return response
-
-
-class YAxisEngine:
     def __init__(self, serial_port_ctrl):
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
@@ -110,6 +99,17 @@ class YAxisEngine:
     @SerialPortController.check_command_response
     def homing(self, probe):
         response = self.serial_port_ctrl.send_command(f"G{probe}28 X0 Y0 Z0")
+        return response
+
+
+class YAxisEngine:
+    def __init__(self, serial_port_ctrl):
+        # General attributes:
+        self.serial_port_ctrl = serial_port_ctrl
+
+    @SerialPortController.check_command_response
+    def move(self, probe, movement, speed):
+        response = self.serial_port_ctrl.send_command(f"{probe}")
         return response
 
 
