@@ -5,8 +5,9 @@ import pytest
 from source import engines_controller
 from source import oscilloscope_controller
 from source import probe_controller
-from source.pcb_ops import PCBMapping
-from source.pcb_ops import TestPointsSelector
+from source import pcb_mapping
+from source import checkpoints_selector
+from source import inputs_controller
 
 
 FILE_DIRECTORY = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +44,7 @@ def probe_inactive(oscilloscope_inactive, engines_inactive):
 def pcb_pic_programmer_example_info():
     file_path = str(FILE_DIRECTORY.parent) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
 
-    pcb_obj = PCBMapping(file_path)
+    pcb_obj = pcb_mapping.PCBMapping(file_path)
     info_df = pcb_obj.run()
     return info_df
 
@@ -52,7 +53,7 @@ def pcb_pic_programmer_example_info():
 def test_points_selector_one_probe():
     probes_configuration = {"1": {"inclination": 0,  # degrees
                                   "diameter": 0.001}}
-    test_points_selector_obj = TestPointsSelector(probes_configuration=probes_configuration)
+    test_points_selector_obj = checkpoints_selector.TestPointsSelector(probes_configuration=probes_configuration)
     return test_points_selector_obj
 
 
@@ -62,5 +63,11 @@ def test_points_selector_two_probes():
                                   "diameter": 0.001},
                             "2": {"inclination": 12,  # degrees
                                   "diameter": 0.001}}
-    test_points_selector_obj = TestPointsSelector(probes_configuration=probes_configuration)
+    test_points_selector_obj = checkpoints_selector.TestPointsSelector(probes_configuration=probes_configuration)
     return test_points_selector_obj
+
+
+@pytest.fixture
+def inputs_controller_object():
+    inputs_ctrl_obj = inputs_controller.InputsController()
+    return inputs_ctrl_obj
