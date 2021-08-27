@@ -1,14 +1,14 @@
 {
-    "probe_1":
-    {
-        "inclination": 0,
-        "speed": 10000,
-        "diameter": 0.001
-    },
-    "probe_2":
-    {
-        "inclination": 12,
-        "speed": 10000,
-        "diameter": 0.001
+    "probes": {
+        "1": {
+            "inclination": 0,
+            "speed": 10000,
+            "diameter": 0.001
+        },
+        "2": {
+            "inclination": 12,
+            "speed": 10000,
+            "diameter": 0.001
+        }
     }
 }

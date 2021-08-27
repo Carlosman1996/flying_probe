@@ -62,7 +62,7 @@ class InputsController:
             "additionalProperties": {"type": "number"}
         }
 
-        if JSONFileOperations.validate_data_schema_dict_of_dicts(data, data_schema):
+        if JSONFileOperations.validate_data_schema_dict_of_dicts(data["probes"], data_schema):
             return data
         else:
             raise Exception("Inputs data structure is not correct.")

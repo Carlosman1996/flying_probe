@@ -34,9 +34,9 @@ def engines_inactive():
 def probe_inactive(oscilloscope_inactive, engines_inactive):
     configuration = {"probe": 1,
                      "speed": 10000}
-    probe_obj = probe_controller.ProbeController(configuration=configuration,
-                                                 oscilloscope_ctrl=oscilloscope_inactive,
+    probe_obj = probe_controller.ProbeController(oscilloscope_ctrl=oscilloscope_inactive,
                                                  engines_ctrl=engines_inactive)
+    probe_obj.initialize(probe_name=configuration["probe"], configuration=configuration)
     return probe_obj
 
 

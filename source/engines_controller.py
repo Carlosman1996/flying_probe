@@ -150,7 +150,7 @@ class ZAxisEngine:
 
 
 class EnginesController:
-    def __init__(self, serial_port, baud_rate=115200, devices_active=True):
+    def __init__(self, serial_port, baud_rate=115200, devices_active=False):
         # General attributes:
         self.serial_port = serial_port
         self.baud_rate = baud_rate
@@ -172,7 +172,7 @@ class EnginesController:
         # Initialize Z axis engine controller:
         self.z_axis_ctrl = ZAxisEngine(self.serial_port_ctrl)
 
-    def close(self):
+    def stop(self):
         # Close serial port controller:
         self.serial_port_ctrl.close_connection()
 
@@ -187,4 +187,4 @@ if __name__ == '__main__':
     engines_ctrl.y_axis_ctrl.move("", 200.0, 10000)
     engines_ctrl.y_axis_ctrl.move("", -100.0, 10000)
 
-    engines_ctrl.close()
+    engines_ctrl.stop()

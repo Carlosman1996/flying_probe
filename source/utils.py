@@ -23,6 +23,13 @@ class DirectoryOperations:
             raise Exception("Directory does not exist.")
 
     @staticmethod
+    def create_dir(dir_path):
+        try:
+            os.mkdir(dir_path)
+        except OSError:
+            print(f"Creation of the directory {dir_path} failed")
+
+    @staticmethod
     def search_last_dir(dir_path):
         DirectoryOperations.check_dir_exists(dir_path)
         return max(glob.glob(os.path.join(dir_path, '*/')), key=os.path.getmtime)

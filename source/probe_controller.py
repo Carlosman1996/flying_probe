@@ -3,15 +3,20 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class ProbeController:
-    def __init__(self, configuration, oscilloscope_ctrl, engines_ctrl):
+    def __init__(self, oscilloscope_ctrl, engines_ctrl):
         # General attributes:
-        self.configuration = configuration  # General configuration of the probe: speed, acceleration, ...
+        self.probe_name = None
+        self.configuration = {}
         self.current_position = {'x': 0,
                                  'y': 0}
 
         # Probe controller must inherit the oscilloscope and engines controller:
         self.engines_ctrl = engines_ctrl
         self.oscilloscope_ctrl = oscilloscope_ctrl
+
+    def initialize(self, probe_name, configuration):
+        self.probe_name = int(probe_name)
+        self.configuration = configuration  # General configuration of the probe: speed, acceleration, ...
 
     def measure_test_point(self, trajectory, measurement_inputs):
         """ measure_test_point(self, list, dict)
@@ -22,11 +27,11 @@ class ProbeController:
         # Move probe to test point following the trajectory:
         for coordinates in trajectory:
             # Move X engine:
-            self.engines_ctrl.x_axis_ctrl.move(probe=self.configuration["probe"],
+            self.engines_ctrl.x_axis_ctrl.move(probe=self.probe_name,
                                                movement=coordinates['x'] - self.current_position['x'],
                                                speed=self.configuration["speed"])
             # Move Y engine:
-            self.engines_ctrl.y_axis_ctrl.move(probe=self.configuration["probe"],
+            self.engines_ctrl.y_axis_ctrl.move(probe=self.probe_name,
                                                movement=coordinates['y'] - self.current_position['y'],
                                                speed=self.configuration["speed"])
 
@@ -35,7 +40,6 @@ class ProbeController:
                                      'y': coordinates['y']}
 
         # Measure test point:
-        measurement_inputs["channel"] = self.configuration["probe"]
+        measurement_inputs["channel"] = self.probe_name
         result = self.oscilloscope_ctrl.measure(measurement_inputs)
-
         return result

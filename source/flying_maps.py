@@ -16,5 +16,5 @@ class FlyingMaps:
         trajectory = [{'x': 10, 'y': 0},
                       {'x': 20, 'y': -1},
                       {'x': -10, 'y': 40}]
-        test_points_data["trayectories"] = test_points_data.apply(lambda row: trajectory, axis=1)
+        test_points_data["trajectories"] = test_points_data.apply(lambda row: trajectory, axis=1)
         return test_points_data

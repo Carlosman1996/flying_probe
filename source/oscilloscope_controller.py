@@ -14,7 +14,7 @@ __email__ = "cmmolinas01@gmail.com"
 class VISAController:
     RESPONSE_DELAY_TIME = 0.25
 
-    def __init__(self, visa_address, device_active):
+    def __init__(self, visa_address, device_active=False):
         self.visa_address = visa_address
         self.device_active = device_active
         self.resource_manager, self.session = self.create_connection()
@@ -46,6 +46,7 @@ class VISAController:
 
             # Set response timeout:
             session.timeout = 10
+
         # If the device is in test mode, set the return parameters to None:
         return resource_manager, session
 
@@ -76,7 +77,7 @@ class VISAController:
 class OscilloscopeController(VISAController):
     """Methods implemented for the oscilloscope OWON VDS1022"""
 
-    def __init__(self, port=5188, device_active=True):
+    def __init__(self, port=5188, device_active=False):
         # Oscilloscope attributes:
         self.address = f"TCPIP0::127.0.0.1::{port}::SOCKET"
         self.pixels_per_div = 25
