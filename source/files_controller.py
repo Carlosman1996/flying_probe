@@ -12,6 +12,7 @@ class InputsController:
         if inputs_path is None:
             inputs_path = ROOT_PATH + "//inputs//"
 
+        # Set files paths:
         self.inputs_data_path = inputs_path + "inputs_data.json"
         self.conf_data_path = inputs_path + "configuration_data.json"
         self.pcb_path = inputs_path + "API_info_pcb.csv"   # Hardcoded
@@ -75,11 +76,7 @@ class InputsController:
 
 class PreTestController:
     def __init__(self, pretest_path=None):
-        if pretest_path is None:
-            self.pretest_path = ROOT_PATH + "//outputs//"
-        else:
-            self.pretest_path = pretest_path
-
+        self.pretest_path = pretest_path
         self.inputs_data_file_name = "inputs_data.json"
         self.conf_data_file_name = "configuration_data.json"
         self.test_points_data_file_name = "test_points_data.csv"   # Hardcoded

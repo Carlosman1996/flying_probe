@@ -35,7 +35,7 @@ class SerialPortController:
         if self.device_active:
             # Create serial port connection (session).
             try:
-                session = serial.Serial(port="COM6", baudrate=115200)
+                session = serial.Serial(port=self.serial_port, baudrate=self.baud_rate)
             except Exception as exception:
                 self.exception_handler(exception)
 
@@ -150,17 +150,17 @@ class ZAxisEngine:
 
 
 class EnginesController:
-    def __init__(self, serial_port, baud_rate=115200, devices_active=False):
+    def __init__(self, engines_conf):
         # General attributes:
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
-        self.devices_active = devices_active
+        self.serial_port = engines_conf["serial_port"]
+        self.baud_rate = engines_conf["baud_rate"]
+        self.devices_active = engines_conf["active"]
         self.x_axis_ctrl = None
         self.y_axis_ctrl = None
         self.z_axis_ctrl = None
 
         # Initialize serial port controller:
-        self.serial_port_ctrl = SerialPortController(self.serial_port, self.baud_rate, devices_active)
+        self.serial_port_ctrl = SerialPortController(self.serial_port, self.baud_rate, engines_conf["active"])
 
     def initialize(self):
         # Initialize X axis engine controller:
@@ -178,7 +178,12 @@ class EnginesController:
 
 
 if __name__ == '__main__':
-    engines_ctrl = EnginesController(serial_port="COM6", baud_rate=115200, devices_active=False)
+    conf = {
+        "serial_port": "COM1",
+        "baud_rate": 115200,
+        "active": False
+    }
+    engines_ctrl = EnginesController(engines_conf=conf)
     engines_ctrl.initialize()
 
     engines_ctrl.y_axis_ctrl.move("", -50.0, 10000)

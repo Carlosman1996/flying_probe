@@ -77,9 +77,9 @@ class VISAController:
 class OscilloscopeController(VISAController):
     """Methods implemented for the oscilloscope OWON VDS1022"""
 
-    def __init__(self, port=5188, device_active=False):
+    def __init__(self, oscilloscope_conf):
         # Oscilloscope attributes:
-        self.address = f"TCPIP0::127.0.0.1::{port}::SOCKET"
+        self.address = f"TCPIP0::127.0.0.1::{oscilloscope_conf['port']}::SOCKET"
         self.pixels_per_div = 25
         self.vertical_divisions = 5
         self.horizontal_divisions = 20
@@ -99,7 +99,7 @@ class OscilloscopeController(VISAController):
         self.relation_acq_time_horizontal = 5
 
         # VISA controller:
-        super().__init__(self.address, device_active)
+        super().__init__(self.address, oscilloscope_conf["active"])
 
     def convert_pixels_to_value(self, vertical_scale, offset_per_div, pixels):
         try:
@@ -241,7 +241,7 @@ class OscilloscopeController(VISAController):
         return self.send_command(f"*ADC? CH{channel}")  # TODO: This method does not work: list of values is not read.
 
     def initialize(self):
-        """ initialize(self, list) """
+        """ initialize(self) """
         # Disable all channels:
         for channel in self.channels:
             self.set_channel_state(channel, "OFF")
@@ -303,7 +303,11 @@ class OscilloscopeController(VISAController):
 
 
 if __name__ == '__main__':
-    osc_obj = OscilloscopeController(port=5188, device_active=False)
+    conf = {
+        "port": 5188,
+        "active": False
+    }
+    osc_obj = OscilloscopeController(oscilloscope_conf=conf)
 
     # Initialize oscilloscope:
     osc_obj.initialize()

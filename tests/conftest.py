@@ -19,13 +19,23 @@ __email__ = "cmmolinas01@gmail.com"
 
 @pytest.fixture
 def oscilloscope_inactive():
-    osc_obj = oscilloscope_controller.OscilloscopeController(port=5188, device_active=False)
+    conf = {
+        "port": 5188,
+        "active": False
+    }
+    osc_obj = oscilloscope_controller.OscilloscopeController(oscilloscope_conf=conf)
+    osc_obj.initialize()
     return osc_obj
 
 
 @pytest.fixture
 def engines_inactive():
-    engines_ctrl = engines_controller.EnginesController(serial_port="COM6", baud_rate=115200, devices_active=False)
+    conf = {
+        "serial_port": "COM1",
+        "baud_rate": 115200,
+        "active": False
+    }
+    engines_ctrl = engines_controller.EnginesController(engines_conf=conf)
     engines_ctrl.initialize()
     return engines_ctrl
 
