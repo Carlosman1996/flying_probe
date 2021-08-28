@@ -79,7 +79,7 @@ class PreTestController:
         self.pretest_path = pretest_path
         self.inputs_data_file_name = "inputs_data.json"
         self.conf_data_file_name = "configuration_data.json"
-        self.test_points_data_file_name = "test_points_data.csv"   # Hardcoded
+        self.test_points_data_file_name = "test_points_processed.csv"   # Hardcoded
 
     def save_data(self, inputs_data, configuration_data, test_points_data):
         # Write inputs data file:
@@ -101,6 +101,16 @@ class PreTestController:
         # Read test points data file:
         test_points_data = DataframeOperations.read_csv(self.pretest_path + self.test_points_data_file_name)
         return inputs_data, conf_data, test_points_data
+
+
+class OutputsController:
+    def __init__(self, outputs_path=None):
+        self.outputs_path = outputs_path
+        self.test_points_data_file_name = "test_points_measurements.csv"   # Hardcoded
+
+    def save_data(self, test_points_data):
+        # Write test points data file:
+        DataframeOperations.save_csv(self.outputs_path + self.test_points_data_file_name, test_points_data)
 
 
 if __name__ == "__main__":

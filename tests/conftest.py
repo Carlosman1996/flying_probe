@@ -23,8 +23,8 @@ def oscilloscope_inactive():
         "port": 5188,
         "active": False
     }
-    osc_obj = oscilloscope_controller.OscilloscopeController(oscilloscope_conf=conf)
-    osc_obj.initialize()
+    osc_obj = oscilloscope_controller.OscilloscopeController()
+    osc_obj.initialize(configuration=conf)
     return osc_obj
 
 
@@ -35,8 +35,8 @@ def engines_inactive():
         "baud_rate": 115200,
         "active": False
     }
-    engines_ctrl = engines_controller.EnginesController(engines_conf=conf)
-    engines_ctrl.initialize()
+    engines_ctrl = engines_controller.EnginesController()
+    engines_ctrl.initialize(configuration=conf)
     return engines_ctrl
 
 

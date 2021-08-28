@@ -2,6 +2,8 @@ import time
 import random
 from datetime import datetime
 import pyvisa as visa
+from source import logger
+from source.utils import FileOperations
 
 
 random.seed(str(datetime.now()))
@@ -14,44 +16,47 @@ __email__ = "cmmolinas01@gmail.com"
 class VISAController:
     RESPONSE_DELAY_TIME = 0.25
 
-    def __init__(self, visa_address, device_active=False):
-        self.visa_address = visa_address
+    def __init__(self):
+        self.device_active = False
+        self.resource_manager = None
+        self.session = None
+
+        # Set logger:
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level="DEBUG")
+
+    def exception_handler(self, exception):
+        message = "VISA ERROR - An error has occurred!\nError information:\n"\
+                  f"\tAbbreviation: {exception.abbreviation}\n"\
+                  f"\tError code: {exception.error_code}\n"\
+                  f"\tDescription: {exception.description}"
+        self.logger.set_message(level="CRITICAL", message_level="MESSAGE", message=message)
+        raise Exception(message)
+
+    def create_connection(self, address, device_active=False):
+        # Set devices state:
         self.device_active = device_active
-        self.resource_manager, self.session = self.create_connection()
-
-    @staticmethod
-    def exception_handler(exception):
-        raise Exception("VISA ERROR - An error has occurred!\n"
-                        "Error information:\n"
-                        f"\tAbbreviation: {exception.abbreviation}\n"
-                        f"\tError code: {exception.error_code}\n"
-                        f"\tDescription: {exception.description}")
-
-    def create_connection(self):
-        resource_manager = None
-        session = None
 
         # If the device is set to active, initialize VISA interface:
         if self.device_active:
             # Create a connection (session) to the TCP/IP socket on the instrument.
-            resource_manager = visa.ResourceManager()
+            self.resource_manager = visa.ResourceManager()
             try:
-                session = resource_manager.open_resource(self.visa_address)
+                self.session = self.resource_manager.open_resource(address)
             except visa.VisaIOError as exception:
                 self.exception_handler(exception)
 
             # For Serial and TCP/IP socket connections enable the read Termination Character, or read's will timeout
-            if session.resource_name.startswith('ASRL') or session.resource_name.endswith('SOCKET'):
-                session.read_termination = '\n'
+            if self.session.resource_name.startswith('ASRL') or self.session.resource_name.endswith('SOCKET'):
+                self.session.read_termination = '\n'
 
             # Set response timeout:
-            session.timeout = 10
+            self.session.timeout = 10
 
-        # If the device is in test mode, set the return parameters to None:
-        return resource_manager, session
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message="Connection established")
 
     def send_command(self, scpi_command):
         response = None
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Send command: {scpi_command}")
 
         # If the device is set to active, write and read command:
         if self.device_active:
@@ -65,6 +70,7 @@ class VISAController:
             response = random.uniform(0, 1000000)
 
         time.sleep(self.RESPONSE_DELAY_TIME)
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Response: {response}")
         return response
 
     def close_connection(self):
@@ -72,14 +78,15 @@ class VISAController:
         if self.device_active:
             self.session.close()
             self.resource_manager.close()
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message="Connection closed")
 
 
 class OscilloscopeController(VISAController):
     """Methods implemented for the oscilloscope OWON VDS1022"""
 
-    def __init__(self, oscilloscope_conf):
+    def __init__(self):
         # Oscilloscope attributes:
-        self.address = f"TCPIP0::127.0.0.1::{oscilloscope_conf['port']}::SOCKET"
+        self.address = None
         self.pixels_per_div = 25
         self.vertical_divisions = 5
         self.horizontal_divisions = 20
@@ -99,7 +106,7 @@ class OscilloscopeController(VISAController):
         self.relation_acq_time_horizontal = 5
 
         # VISA controller:
-        super().__init__(self.address, oscilloscope_conf["active"])
+        super().__init__()
 
     def convert_pixels_to_value(self, vertical_scale, offset_per_div, pixels):
         try:
@@ -240,8 +247,13 @@ class OscilloscopeController(VISAController):
     def get_waveform(self, channel):
         return self.send_command(f"*ADC? CH{channel}")  # TODO: This method does not work: list of values is not read.
 
-    def initialize(self):
+    def initialize(self, configuration):
         """ initialize(self) """
+        # Create connection:
+        address = f"TCPIP0::127.0.0.1::{configuration['port']}::SOCKET"
+        self.create_connection(address=address,
+                               device_active=configuration["active"])
+
         # Disable all channels:
         for channel in self.channels:
             self.set_channel_state(channel, "OFF")
@@ -307,10 +319,10 @@ if __name__ == '__main__':
         "port": 5188,
         "active": False
     }
-    osc_obj = OscilloscopeController(oscilloscope_conf=conf)
+    osc_obj = OscilloscopeController()
 
     # Initialize oscilloscope:
-    osc_obj.initialize()
+    osc_obj.initialize(configuration=conf)
 
     # Perform measurement:
     measurement_inputs = {"channel": 1,
