@@ -1,3 +1,4 @@
+import re
 import json
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
@@ -82,8 +83,85 @@ class PCBMapping:
         return pcb_info_df
 
 
+class PCBMappingKiCAD:
+    def __init__(self, pcb_path=ROOT_PATH + "//inputs//pcb_file.kicad_pcb"):
+        if not FileOperations.check_file_exists(pcb_path):
+            raise Exception("KiCAD PCB file path cannot be found.")
+        self.pcb_path = pcb_path
+
+    def read_components(self):
+        pcb_data = FileOperations.read_file_lines(self.pcb_path)
+
+        # Read and split modules:
+        append_data = False
+        modules_data = []
+        for line in pcb_data:
+            # Module starts with the string "  (module":
+            if line[0:9] == "  (module":
+                append_data = True
+                modules_data.append([])
+
+            # If a module has been detected, the line must be appended in the corresponding group:
+            if append_data:
+                modules_data[-1].append(line)
+
+                # Module finished with the line "  )":
+                if line == "  )\n":
+                    append_data = False
+
+        # Structure modules information:
+        def search_text_between_string(first_string, second_string):
+            regex_result = re.search(f"(?<={first_string})(.*?)(?={second_string})", line_info)
+            if regex_result is not None:
+                return regex_result.group(0)
+            else:
+                return None
+
+        modules = {}
+        for index, module_data in enumerate(modules_data):
+            reference = f"Unknown_module_{index}"
+            module_info = {"placement_outlines": {"circle": [],
+                                                  "line": {}
+                                                  }
+                           }
+            for line_info in module_data:
+                # Search module type and layer:
+                if "module" in line_info:
+                    # Find module type:
+                    module_info["type"] = search_text_between_string(first_string="module ", second_string=" \(")
+                    # Find module layer:
+                    module_info["layer"] = search_text_between_string(first_string="layer ", second_string="\)")
+
+                # Search module reference:
+                elif "reference" in line_info:
+                    reference = search_text_between_string(first_string="reference ", second_string=" \(")
+
+                # Search origin coordinates:
+                if line_info[0:8] == "    (at ":
+                    module_info["position"] = search_text_between_string(first_string="\(at ", second_string="\)")
+                    module_info["position"] = [float(number) for number in module_info["position"].split(" ")]
+
+                # Search placement outlines:
+                if line_info[0:15] == "    (fp_circle ":
+                    values_center = search_text_between_string(first_string="\(center ", second_string="\)")
+                    values_end = search_text_between_string(first_string="\(end ", second_string="\)")
+                    if values_end is not None and values_center is not None:
+                        values_dict = {"center": [float(number) for number in values_center.split(" ")],
+                                       "end": [float(number) for number in values_end.split(" ")]}
+                        module_info["placement_outlines"]["circle"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["circle"].append(None)
+
+            # Append data to global dictionary:
+            print(reference, module_info)
+            modules[reference] = module_info
+        print(len(modules.keys()), modules)
+
+
 if __name__ == "__main__":
-    file_path = ROOT_PATH + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
-    pcb_obj = PCBMapping(file_path)
-    info_df = pcb_obj.run()
-    print(info_df)
+    # file_path = ROOT_PATH + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
+    # pcb_obj = PCBMapping(file_path)
+    # info_df = pcb_obj.run()
+    # print(info_df)
+    pcb_obj = PCBMappingKiCAD()
+    pcb_obj.read_components()
