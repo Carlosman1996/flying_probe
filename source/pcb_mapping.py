@@ -1,5 +1,6 @@
 import re
 import json
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -121,19 +122,21 @@ class PCBMappingKiCAD:
         for index, module_data in enumerate(modules_data):
             reference = f"Unknown_module_{index}"
             module_info = {"placement_outlines": {"circle": [],
-                                                  "line": {}
-                                                  }
+                                                  "line": []
+                                                  },
+                           "pads": {}
                            }
+            pad_number = None
             for line_info in module_data:
                 # Search module type and layer:
-                if "module" in line_info:
+                if line_info[0:10] == "  (module ":
                     # Find module type:
                     module_info["type"] = search_text_between_string(first_string="module ", second_string=" \(")
                     # Find module layer:
                     module_info["layer"] = search_text_between_string(first_string="layer ", second_string="\)")
 
                 # Search module reference:
-                elif "reference" in line_info:
+                elif line_info[0:23] == "    (fp_text reference ":
                     reference = search_text_between_string(first_string="reference ", second_string=" \(")
 
                 # Search origin coordinates:
@@ -151,11 +154,63 @@ class PCBMappingKiCAD:
                         module_info["placement_outlines"]["circle"].append(values_dict)
                     else:
                         module_info["placement_outlines"]["circle"].append(None)
+                elif line_info[0:13] == "    (fp_line ":
+                    values_start = search_text_between_string(first_string="\(start ", second_string="\)")
+                    values_end = search_text_between_string(first_string="\(end ", second_string="\)")
+                    if values_end is not None and values_start is not None:
+                        values_dict = {"start": [float(number) for number in values_start.split(" ")],
+                                       "end": [float(number) for number in values_end.split(" ")]}
+                        module_info["placement_outlines"]["line"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["line"].append(None)
+
+                # Search pads:
+                if line_info[0:9] == "    (pad ":
+                    simplified_line = search_text_between_string(first_string='\(pad ', second_string=' \(at')
+                    split_line_info = simplified_line.split(" ")
+
+                    pad_number = split_line_info[0]
+                    module_info["pads"][pad_number] = {"type": split_line_info[1],
+                                                       "shape": split_line_info[2]}
+
+                    pad_position = search_text_between_string(first_string="\(at ", second_string="\)")
+                    module_info["pads"][pad_number]["position"] = [float(number) for number in pad_position.split(" ")]
+
+                    pad_size = search_text_between_string(first_string="\(size ", second_string="\)")
+                    module_info["pads"][pad_number]["size"] = [float(number) for number in pad_size.split(" ")]
+
+                    pad_drill = search_text_between_string(first_string="\(drill ", second_string="\)")
+                    if pad_drill is not None:
+                        module_info["pads"][pad_number]["drill"] = float(pad_drill)
+                    else:
+                        module_info["pads"][pad_number]["drill"] = None
+                # Search nets pads:
+                elif line_info[0:11] == "      (net ":
+                    net_name = search_text_between_string(first_string='net ', second_string='\)')
+                    module_info["pads"][pad_number]["net_name"] = net_name
 
             # Append data to global dictionary:
-            print(reference, module_info)
             modules[reference] = module_info
-        print(len(modules.keys()), modules)
+        return modules
+
+
+class PCBDrawing:
+    def run(self, modules):
+        factor = 4
+        image_obj = Image.new("RGB", (512 * factor, 512 * factor), (0, 0, 0))
+        draw_obj = ImageDraw.Draw(image_obj)
+
+        for module in modules.values():
+            start_point = module["position"]
+            for point in module["placement_outlines"]["line"]:
+                initial_x = point["start"][0] + start_point[0]
+                final_x = point["end"][0] + start_point[0]
+                initial_y = point["start"][1] + start_point[1]
+                final_y = point["end"][1] + start_point[1]
+                draw_obj.line((initial_x * factor, initial_y * factor, final_x * factor, final_y * factor),
+                              fill=(255, 255, 255), width=1)
+
+        image_obj.show()
 
 
 if __name__ == "__main__":
@@ -164,4 +219,8 @@ if __name__ == "__main__":
     # info_df = pcb_obj.run()
     # print(info_df)
     pcb_obj = PCBMappingKiCAD()
-    pcb_obj.read_components()
+    pcb_info = pcb_obj.read_components()
+    print(json.dumps(pcb_info["C1"], sort_keys=True, indent=4))
+
+    pcb_draw_obj = PCBDrawing()
+    pcb_draw_obj.run(pcb_info)
