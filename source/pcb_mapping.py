@@ -1,3 +1,4 @@
+import math
 import re
 import json
 from PIL import Image, ImageDraw, ImageFont
@@ -90,6 +91,16 @@ class PCBMappingKiCAD:
             raise Exception("KiCAD PCB file path cannot be found.")
         self.pcb_path = pcb_path
 
+    @staticmethod
+    def rotate_point_around_origin(point_increments, angle_degrees):
+        angle_radians = angle_degrees * math.pi / 180
+        point_rotate = [0, 0]
+
+        # Rotation counterclockwise:
+        point_rotate[0] = math.cos(angle_radians) * point_increments[0] + math.sin(angle_radians) * point_increments[1]
+        point_rotate[1] = -math.sin(angle_radians) * point_increments[0] + math.cos(angle_radians) * point_increments[1]
+        return point_rotate
+
     def read_components(self):
         pcb_data = FileOperations.read_file_lines(self.pcb_path)
 
@@ -122,9 +133,11 @@ class PCBMappingKiCAD:
         for index, module_data in enumerate(modules_data):
             reference = f"Unknown_module_{index}"
             module_info = {"placement_outlines": {"circle": [],
-                                                  "line": []
+                                                  "line": [],
+                                                  "arc": []
                                                   },
-                           "pads": {}
+                           "pads": {},
+                           "rotation": 0
                            }
             pad_number = None
             for line_info in module_data:
@@ -143,23 +156,51 @@ class PCBMappingKiCAD:
                 if line_info[0:8] == "    (at ":
                     module_info["position"] = search_text_between_string(first_string="\(at ", second_string="\)")
                     module_info["position"] = [float(number) for number in module_info["position"].split(" ")]
+                    # Separate rotation from position:
+                    if len(module_info["position"]) == 3:
+                        module_info["rotation"] = module_info["position"][2]
+                        module_info["position"] = module_info["position"][:2]
 
                 # Search placement outlines:
                 if line_info[0:15] == "    (fp_circle ":
                     values_center = search_text_between_string(first_string="\(center ", second_string="\)")
                     values_end = search_text_between_string(first_string="\(end ", second_string="\)")
                     if values_end is not None and values_center is not None:
-                        values_dict = {"center": [float(number) for number in values_center.split(" ")],
-                                       "end": [float(number) for number in values_end.split(" ")]}
+                        center_point = [float(number) for number in values_center.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
+
+                        # Rotate points before save them:
+                        values_dict = {"center": self.rotate_point_around_origin(center_point, module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
                         module_info["placement_outlines"]["circle"].append(values_dict)
                     else:
                         module_info["placement_outlines"]["circle"].append(None)
+                elif line_info[0:12] == "    (fp_arc ":
+                    values_start = search_text_between_string(first_string="\(start ", second_string="\)")
+                    values_end = search_text_between_string(first_string="\(end ", second_string="\)")
+                    values_angle = search_text_between_string(first_string="\(angle ", second_string="\)")
+                    if values_start is not None and values_end is not None and values_angle is not None:
+                        start_point = [float(number) for number in values_start.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
+                        angle = float(values_angle)
+
+                        # Rotate points before save them:
+                        values_dict = {"start": self.rotate_point_around_origin(start_point, module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"]),
+                                       "angle": angle}
+                        module_info["placement_outlines"]["arc"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["arc"].append(None)
                 elif line_info[0:13] == "    (fp_line ":
                     values_start = search_text_between_string(first_string="\(start ", second_string="\)")
                     values_end = search_text_between_string(first_string="\(end ", second_string="\)")
                     if values_end is not None and values_start is not None:
-                        values_dict = {"start": [float(number) for number in values_start.split(" ")],
-                                       "end": [float(number) for number in values_end.split(" ")]}
+                        start_point = [float(number) for number in values_start.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
+
+                        # Rotate points before save them:
+                        values_dict = {"start": self.rotate_point_around_origin(start_point, module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
                         module_info["placement_outlines"]["line"].append(values_dict)
                     else:
                         module_info["placement_outlines"]["line"].append(None)
@@ -175,6 +216,15 @@ class PCBMappingKiCAD:
 
                     pad_position = search_text_between_string(first_string="\(at ", second_string="\)")
                     module_info["pads"][pad_number]["position"] = [float(number) for number in pad_position.split(" ")]
+                    # Separate rotation from position:
+                    if len(module_info["position"]) == 3:
+                        rotation = module_info["pads"][pad_number]["position"][2]
+                        position = module_info["pads"][pad_number]["position"][:2]
+                        module_info["pads"][pad_number]["rotation"] = rotation
+                        module_info["pads"][pad_number]["position"] = self.rotate_point_around_origin(position,
+                                                                                                      rotation)
+                    else:
+                        module_info["pads"][pad_number]["rotation"] = 0
 
                     pad_size = search_text_between_string(first_string="\(size ", second_string="\)")
                     module_info["pads"][pad_number]["size"] = [float(number) for number in pad_size.split(" ")]
@@ -209,6 +259,35 @@ class PCBDrawing:
                 final_y = point["end"][1] + start_point[1]
                 draw_obj.line((initial_x * factor, initial_y * factor, final_x * factor, final_y * factor),
                               fill=(255, 255, 255), width=1)
+            for point in module["placement_outlines"]["circle"]:
+                radius = math.sqrt((point["end"][0] - point["center"][0])**2 + (point["end"][1] - point["center"][1])**2)
+                left_up_x = start_point[0] + point["center"][0] - radius
+                left_up_y = start_point[1] + point["center"][1] - radius
+                right_down_x = start_point[0] + point["center"][0] + radius
+                right_down_y = start_point[1] + point["center"][1] + radius
+                draw_obj.ellipse((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
+                                 fill=(255, 255, 255), width=1)
+            for point in module["placement_outlines"]["arc"]:
+                radius = math.sqrt((point["end"][0] - point["start"][0])**2 + (point["end"][1] - point["start"][1])**2)
+                start_angle = math.atan2(point["start"][1], point["start"][0]) * 180 / math.pi
+                end_angle = math.atan2(point["end"][1], point["end"][0]) * 180 / math.pi
+
+                print(start_angle, end_angle, point["angle"], start_angle-end_angle)
+
+                left_up_x = start_point[0] + point["start"][0] - radius
+                left_up_y = start_point[1] + point["start"][1] - radius
+                right_down_x = start_point[0] + point["start"][0] + radius
+                right_down_y = start_point[1] + point["start"][1] + radius
+
+                draw_obj.arc((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
+                             start=start_angle, end=end_angle, fill=(255, 255, 255), width=1)
+            for pad_number, par_params in module["pads"].items():
+                left_up_x = start_point[0] + par_params["position"][0] - par_params["size"][0]
+                left_up_y = start_point[1] + par_params["position"][1] - par_params["size"][0]
+                right_down_x = start_point[0] + par_params["position"][0] + par_params["size"][0]
+                right_down_y = start_point[1] + par_params["position"][1] + par_params["size"][0]
+                draw_obj.ellipse((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
+                                 fill=(255, 0, 0), width=0.1)
 
         image_obj.show()
 
