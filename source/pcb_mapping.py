@@ -119,45 +119,50 @@ class PCBMappingKiCAD:
             else:
                 return None
 
-        def check_element_layer(check_layer: list, line_string: str):
+        def check_element_layer(line_string: str):
             layer = search_text_between_string(first_string="\\(layer ", second_string="\\)", line_string=line_string)
             if not layer:
                 layer = search_text_between_string(first_string="\\(layers ", second_string="\\)",
                                                    line_string=line_string)
-            return layer in check_layer
+            return layer
 
         pcb_data = FileOperations.read_file_lines(self.pcb_path)
         pcb_data_dictionary = {"borders": [],
                                "nets": {},
+                               "net_classes": {},
                                "vias": [],
                                "modules": {}}
 
+        # TODO: refactor code
+
         # Read and split kicad_pcb info in general and modules data:
-        append_data = False
+        append_modules_data = False
+        append_netclasses_data = False
+        netclass_name = None
         modules_data = []
         for line_info in pcb_data:
             # Save PCB borders:
             if line_info[0:11] == "  (gr_line ":
-                if check_element_layer(check_layer=self.borders_layers, line_string=line_info):
-                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                              line_string=line_info)
-                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                            line_string=line_info)
-                    if values_end is not None and values_start is not None:
-                        start_point = [float(number) for number in values_start.split(" ")]
-                        end_point = [float(number) for number in values_end.split(" ")]
+                values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                          line_string=line_info)
+                values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                        line_string=line_info)
+                if values_end is not None and values_start is not None:
+                    start_point = [float(number) for number in values_start.split(" ")]
+                    end_point = [float(number) for number in values_end.split(" ")]
 
-                        # Read angle:
-                        # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                        #                                          line_string=line_info))
-                        angle = 0
+                    # Read angle:
+                    # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                    #                                          line_string=line_info))
+                    angle = 0
 
-                        # Rotate points before save them:
-                        values_dict = {"start": self.rotate_point_around_origin(start_point, angle),
-                                       "end": self.rotate_point_around_origin(end_point, angle)}
-                        pcb_data_dictionary["borders"].append(values_dict)
-                    else:
-                        pcb_data_dictionary["borders"].append(None)
+                    # Rotate points before save them:
+                    values_dict = {"layer": check_element_layer(line_string=line_info),
+                                   "start": self.rotate_point_around_origin(start_point, angle),
+                                   "end": self.rotate_point_around_origin(end_point, angle)}
+                    pcb_data_dictionary["borders"].append(values_dict)
+                else:
+                    pcb_data_dictionary["borders"].append(None)
 
             # Save PCB nets:
             if line_info[0:7] == "  (net ":
@@ -174,41 +179,80 @@ class PCBMappingKiCAD:
                     net_name = ""
                 pcb_data_dictionary["nets"][net_number] = net_name
 
-            # Save PCB nets:
+            # Save PCB nets classes
+            if line_info[0:13] == "  (net_class ":
+                netclass_name = search_text_between_string(first_string="\\(net_class ", second_string="\\ ",
+                                                           line_string=line_info)
+                pcb_data_dictionary["net_classes"][netclass_name] = {"via_diameter": None,
+                                                                     "via_drill": None,
+                                                                     "uvia_diameter": None,
+                                                                     "uvia_drill": None,
+                                                                     "nets": []}
+                append_netclasses_data = True
+            elif line_info[0:4] == "    " and append_netclasses_data:
+                if line_info[0:13] == "    (via_dia ":
+                    pcb_data_dictionary["net_classes"][netclass_name]["via_diameter"] = \
+                        search_text_between_string(first_string="\\(via_dia ", second_string="\\)",
+                                                   line_string=line_info)
+                elif line_info[0:15] == "    (via_drill ":
+                    pcb_data_dictionary["net_classes"][netclass_name]["via_drill"] = \
+                        search_text_between_string(first_string="\\(via_drill ", second_string="\\)",
+                                                   line_string=line_info)
+                elif line_info[0:14] == "    (uvia_dia ":
+                    pcb_data_dictionary["net_classes"][netclass_name]["uvia_diameter"] = \
+                        search_text_between_string(first_string="\\(uvia_dia ", second_string="\\)",
+                                                   line_string=line_info)
+                elif line_info[0:15] == "    (uvia_drill ":
+                    pcb_data_dictionary["net_classes"][netclass_name]["uvia_drill"] = \
+                        search_text_between_string(first_string="\\(uvia_drill ", second_string="\\)",
+                                                   line_string=line_info)
+                elif line_info[0:13] == "    (add_net ":
+                    net_name = search_text_between_string(first_string='\\(add_net "',
+                                                          second_string='\\"\\)', line_string=line_info)
+                    if not net_name:
+                        net_name = search_text_between_string(first_string='\\(add_net ',
+                                                              second_string='\\)', line_string=line_info)
+
+                    pcb_data_dictionary["net_classes"][netclass_name]["nets"].append(net_name)
+            elif line_info == "  )\n":
+                netclass_name = None
+                append_netclasses_data = False
+
+            # Save PCB vias:
             if line_info[0:7] == "  (via ":
-                if check_element_layer(check_layer=self.vias_layers, line_string=line_info):
-                    values_point = search_text_between_string(first_string="\\(at ", second_string="\\)",
-                                                              line_string=line_info)
-                    if point is not None:
-                        point = [float(number) for number in values_point.split(" ")]
+                values_point = search_text_between_string(first_string="\\(at ", second_string="\\)",
+                                                          line_string=line_info)
+                if values_point is not None:
+                    point = [float(number) for number in values_point.split(" ")]
 
-                        # Read angle:
-                        # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                        #                                          line_string=line_info))
-                        angle = 0
+                    # Read angle:
+                    # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                    #                                          line_string=line_info))
+                    angle = 0
 
-                        # Rotate points before save them:
-                        # TODO: add layer names to avoid filters in this section - it must be later, at processing stage
-                        values_dict = {"position": self.rotate_point_around_origin(point, angle),
-                                       "size": None,
-                                       "drill": None,
-                                       "net": None}    # TODO: read net name
-                        pcb_data_dictionary["vias"].append(values_dict)
-                    else:
-                        pcb_data_dictionary["vias"].append(None)
+                    # Rotate points before save them:
+                    values_dict = {"position": self.rotate_point_around_origin(point, angle),
+                                   "layer": check_element_layer(line_string=line_info),
+                                   "size": search_text_between_string(first_string="\\(size ", second_string="\\)",
+                                                                      line_string=line_info),
+                                   "net": search_text_between_string(first_string="\\(net ", second_string="\\)",
+                                                                     line_string=line_info)}
+                    pcb_data_dictionary["vias"].append(values_dict)
+                else:
+                    pcb_data_dictionary["vias"].append(None)
 
             # Module starts with the string "  (module":
             if line_info[0:10] == "  (module ":
-                append_data = True
+                append_modules_data = True
                 modules_data.append([])
 
             # If a module has been detected, the line must be appended in the corresponding group:
-            if append_data:
+            if append_modules_data:
                 modules_data[-1].append(line_info)
 
                 # Module finished with the line "  )":
                 if line_info == "  )\n":
-                    append_data = False
+                    append_modules_data = False
 
         for index, module_data in enumerate(modules_data):
             reference = f"Unknown_module_{index}"
@@ -246,95 +290,97 @@ class PCBMappingKiCAD:
                         module_info["position"] = module_info["position"][:2]
 
                 # Search placement outline if it is in silkscreen layers:
-                if check_element_layer(check_layer=self.placement_outlines_layers, line_string=line_info):
-                    if line_info[0:15] == "    (fp_circle ":
-                        values_center = search_text_between_string(first_string="\\(center ", second_string="\\)",
-                                                                   line_string=line_info)
-                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                                line_string=line_info)
-                        if values_end is not None and values_center is not None:
-                            center_point = [float(number) for number in values_center.split(" ")]
-                            end_point = [float(number) for number in values_end.split(" ")]
+                if line_info[0:15] == "    (fp_circle ":
+                    values_center = search_text_between_string(first_string="\\(center ", second_string="\\)",
+                                                               line_string=line_info)
+                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                            line_string=line_info)
+                    if values_end is not None and values_center is not None:
+                        center_point = [float(number) for number in values_center.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
 
-                            # Rotate points before save them:
-                            values_dict = {"center": self.rotate_point_around_origin(center_point, module_info["rotation"]),
-                                           "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
-                            module_info["placement_outlines"]["circle"].append(values_dict)
-                        else:
-                            module_info["placement_outlines"]["circle"].append(None)
-                    elif line_info[0:12] == "    (fp_arc ":
-                        values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                                  line_string=line_info)
-                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                                line_string=line_info)
-                        values_angle = search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                                                                  line_string=line_info)
-                        if values_start is not None and values_end is not None and values_angle is not None:
-                            start_point = [float(number) for number in values_start.split(" ")]
-                            end_point = [float(number) for number in values_end.split(" ")]
-                            angle = float(values_angle)
+                        # Rotate points before save them:
+                        values_dict = {"layer": check_element_layer(line_string=line_info),
+                                       "center": self.rotate_point_around_origin(center_point, module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
+                        module_info["placement_outlines"]["circle"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["circle"].append(None)
+                elif line_info[0:12] == "    (fp_arc ":
+                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                              line_string=line_info)
+                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                            line_string=line_info)
+                    values_angle = search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                                                              line_string=line_info)
+                    if values_start is not None and values_end is not None and values_angle is not None:
+                        start_point = [float(number) for number in values_start.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
+                        angle = float(values_angle)
 
-                            # Rotate points before save them:
-                            values_dict = {"start": self.rotate_point_around_origin(start_point, module_info["rotation"]),
-                                           "end": self.rotate_point_around_origin(end_point, module_info["rotation"]),
-                                           "angle": angle}
-                            module_info["placement_outlines"]["arc"].append(values_dict)
-                        else:
-                            module_info["placement_outlines"]["arc"].append(None)
-                    elif line_info[0:13] == "    (fp_line ":
-                        values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                                  line_string=line_info)
-                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                                line_string=line_info)
-                        if values_end is not None and values_start is not None:
-                            start_point = [float(number) for number in values_start.split(" ")]
-                            end_point = [float(number) for number in values_end.split(" ")]
+                        # Rotate points before save them:
+                        values_dict = {"layer": check_element_layer(line_string=line_info),
+                                       "start": self.rotate_point_around_origin(start_point, module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"]),
+                                       "angle": angle}
+                        module_info["placement_outlines"]["arc"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["arc"].append(None)
+                elif line_info[0:13] == "    (fp_line ":
+                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                              line_string=line_info)
+                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                            line_string=line_info)
+                    if values_end is not None and values_start is not None:
+                        start_point = [float(number) for number in values_start.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
 
-                            # Rotate points before save them:
-                            values_dict = {"start": self.rotate_point_around_origin(start_point,
-                                                                                    module_info["rotation"]),
-                                           "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
-                            module_info["placement_outlines"]["line"].append(values_dict)
-                        else:
-                            module_info["placement_outlines"]["line"].append(None)
+                        # Rotate points before save them:
+                        values_dict = {"layer": check_element_layer(line_string=line_info),
+                                       "start": self.rotate_point_around_origin(start_point,
+                                                                                module_info["rotation"]),
+                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
+                        module_info["placement_outlines"]["line"].append(values_dict)
+                    else:
+                        module_info["placement_outlines"]["line"].append(None)
 
                 # Search pad:
                 if line_info[0:9] == "    (pad ":
                     # Check if pad is in a layer allowed:
-                    if check_element_layer(check_layer=self.pads_layers, line_string=line_info):
-                        simplified_line = search_text_between_string(first_string='\\(pad ', second_string=' \\(at',
-                                                                     line_string=line_info)
-                        split_line_info = simplified_line.split(" ")
+                    simplified_line = search_text_between_string(first_string='\\(pad ', second_string=' \\(at',
+                                                                 line_string=line_info)
+                    split_line_info = simplified_line.split(" ")
 
-                        pad_number = split_line_info[0]
-                        if pad_number == '\"\"':
-                            pad_number = "unknown"
-                        module_info["pads"][pad_number] = {"type": split_line_info[1],
-                                                           "shape": split_line_info[2]}
+                    pad_number = split_line_info[0]
+                    if pad_number == '\"\"':
+                        pad_number = "unknown"
+                    module_info["pads"][pad_number] = {"layer": check_element_layer(line_string=line_info),
+                                                       "type": split_line_info[1],
+                                                       "shape": split_line_info[2]}
 
-                        pad_position = search_text_between_string(first_string="\\(at ", second_string="\\)",
-                                                                  line_string=line_info)
-                        module_info["pads"][pad_number]["position"] = [float(number) for number in pad_position.split(" ")]
-                        # Separate rotation from position:
-                        if len(module_info["pads"][pad_number]["position"]) == 3:
-                            rotation = module_info["pads"][pad_number]["position"][2]
-                            position = module_info["pads"][pad_number]["position"][:2]
-                            module_info["pads"][pad_number]["rotation"] = rotation
-                            module_info["pads"][pad_number]["position"] = self.rotate_point_around_origin(position,
-                                                                                                          rotation)
-                        else:
-                            module_info["pads"][pad_number]["rotation"] = 0
-
-                        pad_size = search_text_between_string(first_string="\\(size ", second_string="\\)",
+                    pad_position = search_text_between_string(first_string="\\(at ", second_string="\\)",
                                                               line_string=line_info)
-                        module_info["pads"][pad_number]["size"] = [float(number) for number in pad_size.split(" ")]
+                    module_info["pads"][pad_number]["position"] = [float(number) for number in pad_position.split(" ")]
+                    # Separate rotation from position:
+                    if len(module_info["pads"][pad_number]["position"]) == 3:
+                        rotation = module_info["pads"][pad_number]["position"][2]
+                        position = module_info["pads"][pad_number]["position"][:2]
+                        module_info["pads"][pad_number]["rotation"] = rotation
+                        module_info["pads"][pad_number]["position"] = self.rotate_point_around_origin(position,
+                                                                                                      rotation)
+                    else:
+                        module_info["pads"][pad_number]["rotation"] = 0
 
-                        pad_drill = search_text_between_string(first_string="\\(drill ", second_string="\\)",
-                                                               line_string=line_info)
-                        if pad_drill is not None:
-                            module_info["pads"][pad_number]["drill"] = float(pad_drill)
-                        else:
-                            module_info["pads"][pad_number]["drill"] = None
+                    pad_size = search_text_between_string(first_string="\\(size ", second_string="\\)",
+                                                          line_string=line_info)
+                    module_info["pads"][pad_number]["size"] = [float(number) for number in pad_size.split(" ")]
+
+                    pad_drill = search_text_between_string(first_string="\\(drill ", second_string="\\)",
+                                                           line_string=line_info)
+                    if pad_drill is not None:
+                        module_info["pads"][pad_number]["drill"] = float(pad_drill)
+                    else:
+                        module_info["pads"][pad_number]["drill"] = None
                 # Search nets pads:
                 elif line_info[0:11] == "      (net ":
                     # Check if the net corresponds to a pad:
@@ -381,6 +427,10 @@ class PCBMappingKiCAD:
             for pad_number, par_params in module["pads"].items():
                 par_params["position"][0] += start_point[0]
                 par_params["position"][1] += start_point[1]
+
+        # TODO: remove those components whose layer is not in top/bottom side
+        # TODO: convert all values from mm to m
+
         return pcb_data_dictionary
 
     def dataframe_constructor(self, pcb_data_dictionary):
