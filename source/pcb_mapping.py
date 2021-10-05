@@ -98,7 +98,8 @@ class PCBMappingKiCAD:
         self.vias_layers = ["top_layer bottom_layer", "top_layer", "bottom_layer"]
 
         # Dataframe:
-        self.df_columns = ["type", "name", "net_name", "position", "drill", "diameter", "shape_coordinates", "height"]
+        self.df_columns = ["type", "name", "layer", "net_name", "net_class", "drill", "diameter", "position",
+                           "shape_lines", "shape_circles", "shape_arcs", "height"]
 
     @staticmethod
     def rotate_point_around_origin(point_increments, angle_degrees):
@@ -110,7 +111,7 @@ class PCBMappingKiCAD:
         point_rotate[1] = -math.sin(angle_radians) * point_increments[0] + math.cos(angle_radians) * point_increments[1]
         return point_rotate
 
-    def read_components(self):
+    def pcb_reader(self):
         # Structure modules information:
         def search_text_between_string(first_string: str, second_string: str, line_string: str):
             regex_result = re.search(f"(?<={first_string})(.*?)(?={second_string})", line_string)
@@ -127,11 +128,11 @@ class PCBMappingKiCAD:
             return layer
 
         pcb_data = FileOperations.read_file_lines(self.pcb_path)
-        pcb_data_dictionary = {"borders": [],
-                               "nets": {},
-                               "net_classes": {},
-                               "vias": [],
-                               "modules": {}}
+        pcb_data_dict = {"borders": [],
+                         "nets": {},
+                         "net_classes": {},
+                         "vias": [],
+                         "modules": {}}
 
         # TODO: refactor code
 
@@ -160,9 +161,9 @@ class PCBMappingKiCAD:
                     values_dict = {"layer": check_element_layer(line_string=line_info),
                                    "start": self.rotate_point_around_origin(start_point, angle),
                                    "end": self.rotate_point_around_origin(end_point, angle)}
-                    pcb_data_dictionary["borders"].append(values_dict)
+                    pcb_data_dict["borders"].append(values_dict)
                 else:
-                    pcb_data_dictionary["borders"].append(None)
+                    pcb_data_dict["borders"].append(None)
 
             # Save PCB nets:
             if line_info[0:7] == "  (net ":
@@ -177,13 +178,13 @@ class PCBMappingKiCAD:
                 # Generate key data:
                 if net_name == '\"\"':
                     net_name = ""
-                pcb_data_dictionary["nets"][net_number] = net_name
+                pcb_data_dict["nets"][net_number] = net_name
 
             # Save PCB nets classes
             if line_info[0:13] == "  (net_class ":
                 netclass_name = search_text_between_string(first_string="\\(net_class ", second_string="\\ ",
                                                            line_string=line_info)
-                pcb_data_dictionary["net_classes"][netclass_name] = {"via_diameter": None,
+                pcb_data_dict["net_classes"][netclass_name] = {"via_diameter": None,
                                                                      "via_drill": None,
                                                                      "uvia_diameter": None,
                                                                      "uvia_drill": None,
@@ -191,19 +192,19 @@ class PCBMappingKiCAD:
                 append_netclasses_data = True
             elif line_info[0:4] == "    " and append_netclasses_data:
                 if line_info[0:13] == "    (via_dia ":
-                    pcb_data_dictionary["net_classes"][netclass_name]["via_diameter"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["via_diameter"] = \
                         search_text_between_string(first_string="\\(via_dia ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:15] == "    (via_drill ":
-                    pcb_data_dictionary["net_classes"][netclass_name]["via_drill"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["via_drill"] = \
                         search_text_between_string(first_string="\\(via_drill ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:14] == "    (uvia_dia ":
-                    pcb_data_dictionary["net_classes"][netclass_name]["uvia_diameter"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["uvia_diameter"] = \
                         search_text_between_string(first_string="\\(uvia_dia ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:15] == "    (uvia_drill ":
-                    pcb_data_dictionary["net_classes"][netclass_name]["uvia_drill"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["uvia_drill"] = \
                         search_text_between_string(first_string="\\(uvia_drill ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:13] == "    (add_net ":
@@ -213,7 +214,7 @@ class PCBMappingKiCAD:
                         net_name = search_text_between_string(first_string='\\(add_net ',
                                                               second_string='\\)', line_string=line_info)
 
-                    pcb_data_dictionary["net_classes"][netclass_name]["nets"].append(net_name)
+                    pcb_data_dict["net_classes"][netclass_name]["nets"].append(net_name)
             elif line_info == "  )\n":
                 netclass_name = None
                 append_netclasses_data = False
@@ -233,13 +234,14 @@ class PCBMappingKiCAD:
                     # Rotate points before save them:
                     values_dict = {"position": self.rotate_point_around_origin(point, angle),
                                    "layer": check_element_layer(line_string=line_info),
-                                   "size": search_text_between_string(first_string="\\(size ", second_string="\\)",
-                                                                      line_string=line_info),
+                                   "size": float(search_text_between_string(first_string="\\(size ",
+                                                                            second_string="\\)",
+                                                                            line_string=line_info)),
                                    "net": search_text_between_string(first_string="\\(net ", second_string="\\)",
                                                                      line_string=line_info)}
-                    pcb_data_dictionary["vias"].append(values_dict)
+                    pcb_data_dict["vias"].append(values_dict)
                 else:
-                    pcb_data_dictionary["vias"].append(None)
+                    pcb_data_dict["vias"].append(None)
 
             # Module starts with the string "  (module":
             if line_info[0:10] == "  (module ":
@@ -281,9 +283,9 @@ class PCBMappingKiCAD:
 
                 # Search origin coordinates:
                 if line_info[0:8] == "    (at ":
-                    module_info["position"] = search_text_between_string(first_string="\\(at ", second_string="\\)",
-                                                                         line_string=line_info)
-                    module_info["position"] = [float(number) for number in module_info["position"].split(" ")]
+                    start_point_string = search_text_between_string(first_string="\\(at ", second_string="\\)",
+                                                                    line_string=line_info)
+                    module_info["position"] = [float(number) for number in start_point_string.split(" ")]
                     # Separate rotation from position:
                     if len(module_info["position"]) == 3:
                         module_info["rotation"] = module_info["position"][2]
@@ -392,12 +394,13 @@ class PCBMappingKiCAD:
                     pad_number = None
 
             # Append data to global dictionary:
-            pcb_data_dictionary["modules"][reference] = module_info
-        return pcb_data_dictionary
+            pcb_data_dict["modules"][reference] = module_info
+        return pcb_data_dict
 
     @staticmethod
-    def pcb_dict_processor(pcb_data_dictionary):
-        for module in pcb_data_dictionary["modules"].values():
+    def pcb_data_processor(pcb_data_dict):
+        # Convert coordinates from relative to absolute;
+        for module in pcb_data_dict["modules"].values():
             start_point = module["position"]
 
             for point in module["placement_outlines"]["line"]:
@@ -431,10 +434,98 @@ class PCBMappingKiCAD:
         # TODO: remove those components whose layer is not in top/bottom side
         # TODO: convert all values from mm to m
 
-        return pcb_data_dictionary
+        return pcb_data_dict
 
-    def dataframe_constructor(self, pcb_data_dictionary):
+    def dataframe_constructor(self, pcb_data_dict):
         pcb_info_df = pd.DataFrame(columns=self.df_columns)
+
+        def append_dict_in_df(data_df, element_type="", name="", layer="", net_name="", net_class="", drill=None,
+                              diameter=None, position=None, shape_lines=None, shape_circles=None, shape_arcs=None,
+                              height=0):
+            data_df = data_df.append({"type": element_type,
+                                      "name": name,
+                                      "layer": layer,
+                                      "net_name": net_name,
+                                      "net_class": net_class,
+                                      "drill": drill,
+                                      "diameter": diameter,
+                                      "position": position,
+                                      "shape_lines": shape_lines if shape_lines else [],
+                                      "shape_circles": shape_circles if shape_circles else [],
+                                      "shape_arcs": shape_arcs if shape_arcs else [],
+                                      "height": height},
+                                     ignore_index=True)
+            return data_df
+
+        # Restructure borders information:
+        border_per_layer = {}
+        for border in pcb_data_dict["borders"]:
+            if border["layer"] not in list(border_per_layer.keys()):
+                border_per_layer[border["layer"]] = [border["start"], border["end"]]
+            else:
+                border_per_layer[border["layer"]].append(border["start"])
+                border_per_layer[border["layer"]].append(border["end"])
+
+        # Append borders information:
+        for layer_name, shape in border_per_layer.items():
+            pcb_info_df = append_dict_in_df(pcb_info_df,
+                                            element_type="border",
+                                            layer=layer_name,
+                                            shape_lines=shape)
+
+        # Restructure nets information:
+        for net_key, net_name in pcb_data_dict["nets"].items():
+            for net_class_key, net_class_values in pcb_data_dict["net_classes"].items():
+                if net_name in net_class_values["nets"]:
+                    pcb_data_dict["nets"][net_key] = {"name": net_name,
+                                                      "net_class": net_class_key}
+
+        # Append vias information:
+        for via_info in pcb_data_dict["vias"]:
+            net_name = pcb_data_dict["nets"][via_info["net"]]["name"]
+            net_class = pcb_data_dict["nets"][via_info["net"]]["net_class"]
+            drill = pcb_data_dict["net_classes"][net_class]["via_drill"]
+            pcb_info_df = append_dict_in_df(pcb_info_df,
+                                            element_type="via",
+                                            layer=via_info["layer"],
+                                            net_name=net_name,
+                                            net_class=net_class,
+                                            drill=drill,
+                                            diameter=via_info["size"],
+                                            position=via_info["position"])
+
+        # Append components information:
+        for module_key, module_info in pcb_data_dict["modules"].items():
+            # Append modules information:
+            pcb_info_df = append_dict_in_df(pcb_info_df,
+                                            element_type="module",
+                                            name=module_key,
+                                            layer="",
+                                            net_name="",
+                                            net_class="",
+                                            drill=None,
+                                            diameter=None,
+                                            position=None,
+                                            shape_lines=None,
+                                            shape_circles=None,
+                                            shape_arcs=None,
+                                            height=0)
+
+            # Append pads information:
+            for pad_key, pad_info in module_info["pads"].items():
+                pcb_info_df = append_dict_in_df(pcb_info_df,
+                                                element_type="pad",
+                                                name=module_key + "_pad_" + pad_key,
+                                                layer="",
+                                                net_name="",
+                                                net_class="",
+                                                drill=None,
+                                                diameter=None,
+                                                position=None,
+                                                shape_lines=None,
+                                                shape_circles=None,
+                                                shape_arcs=None,
+                                                height=0)
 
         return pcb_info_df
 
@@ -501,10 +592,12 @@ if __name__ == "__main__":
 
     # METHOD 2:
     pcb_obj = PCBMappingKiCAD()
-    pcb_info = pcb_obj.read_components()
-    pcb_info_processed = pcb_obj.pcb_dict_processor(pcb_info)
-    pcb_obj.dataframe_constructor(pcb_info)
+    pcb_info = pcb_obj.pcb_reader()
+    pcb_info_processed = pcb_obj.pcb_data_processor(pcb_info)
+    pcb_df = pcb_obj.dataframe_constructor(pcb_info_processed)
+
     # print(json.dumps(pcb_info, sort_keys=True, indent=4))
+    print(pcb_df)
     with open(ROOT_PATH + "//inputs//pcb_data.json", 'w') as json_obj:
         json.dump(pcb_info_processed, json_obj, indent=4)
 

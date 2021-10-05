@@ -58,117 +58,450 @@
     ],
     "nets": {
         "0": "",
-        "1": "/CTS",
-        "2": "/DTR",
-        "3": "/PC-CLOCK-OUT",
-        "4": "/TXD",
-        "5": "GND",
-        "6": "Net-(C2-Pad1)",
-        "7": "Net-(C4-Pad1)",
-        "8": "Net-(C5-Pad1)",
-        "9": "Net-(C9-Pad2)",
-        "10": "Net-(D11-Pad1)",
-        "11": "Net-(D11-Pad2)",
-        "12": "Net-(Q1-Pad2)",
-        "13": "Net-(Q2-Pad3)",
-        "14": "Net-(Q3-Pad2)",
-        "15": "Net-(R12-Pad1)",
-        "16": "Net-(R13-Pad1)",
-        "17": "Net-(R15-Pad1)",
-        "18": "Net-(R16-Pad1)",
-        "19": "Net-(R8-Pad1)",
-        "20": "Net-(RV1-Pad2)",
-        "21": "VCC",
-        "22": "VPP",
-        "23": "/pic_sockets/VCC_PIC",
-        "24": "Net-(D1-Pad2)",
-        "25": "Net-(D4-Pad2)",
-        "26": "Net-(D8-Pad2)",
-        "27": "Net-(D9-Pad2)",
-        "28": "Net-(D12-Pad2)",
-        "29": "/VPP/MCLR",
-        "30": "/CLOCK-RB6",
-        "31": "/DATA-RB7",
-        "32": "Net-(D2-Pad2)",
-        "33": "Net-(D6-Pad2)",
-        "34": "Net-(D10-Pad2)",
-        "35": "Net-(P3-Pad2)",
-        "36": "Net-(P3-Pad3)",
-        "37": "Net-(P3-Pad4)",
-        "38": "Net-(P3-Pad5)",
-        "39": "Net-(P3-Pad6)",
-        "40": "Net-(P3-Pad7)",
-        "41": "Net-(P3-Pad9)",
-        "42": "Net-(P3-Pad10)",
-        "43": "Net-(P3-Pad13)",
-        "44": "Net-(P3-Pad14)",
-        "45": "Net-(P3-Pad15)",
-        "46": "Net-(P3-Pad16)",
-        "47": "Net-(P3-Pad17)",
-        "48": "Net-(P3-Pad18)",
-        "49": "Net-(P3-Pad19)",
-        "50": "Net-(P3-Pad20)",
-        "51": "Net-(P3-Pad21)",
-        "52": "Net-(P3-Pad22)",
-        "53": "Net-(P3-Pad23)",
-        "54": "Net-(P3-Pad24)",
-        "55": "Net-(P3-Pad25)",
-        "56": "Net-(P3-Pad26)",
-        "57": "Net-(P3-Pad27)",
-        "58": "Net-(P3-Pad28)",
-        "59": "Net-(P3-Pad29)",
-        "60": "Net-(P3-Pad30)",
-        "61": "Net-(P3-Pad33)",
-        "62": "Net-(P3-Pad34)",
-        "63": "Net-(P3-Pad35)",
-        "64": "Net-(P3-Pad36)",
-        "65": "Net-(P3-Pad37)",
-        "66": "Net-(P3-Pad38)",
-        "67": "Net-(J1-Pad1)",
-        "68": "Net-(J1-Pad2)",
-        "69": "Net-(J1-Pad6)",
-        "70": "Net-(J1-Pad9)",
-        "71": "Net-(U6-Pad5)",
-        "72": "Net-(U6-Pad2)",
-        "73": "Net-(U6-Pad3)",
-        "74": "Net-(U1-Pad7)",
-        "75": "Net-(U4-Pad3)",
-        "76": "Net-(U4-Pad4)",
-        "77": "Net-(P2-Pad15)",
-        "78": "Net-(P2-Pad2)",
-        "79": "Net-(P2-Pad16)",
-        "80": "Net-(P2-Pad3)",
-        "81": "Net-(P2-Pad17)",
-        "82": "Net-(P2-Pad4)",
-        "83": "Net-(P2-Pad18)",
-        "84": "Net-(P2-Pad5)",
-        "85": "Net-(P2-Pad6)",
-        "86": "Net-(P2-Pad7)",
-        "87": "Net-(P2-Pad21)",
-        "88": "Net-(P2-Pad22)",
-        "89": "Net-(P2-Pad9)",
-        "90": "Net-(P2-Pad23)",
-        "91": "Net-(P2-Pad10)",
-        "92": "Net-(P2-Pad24)",
-        "93": "Net-(P2-Pad11)",
-        "94": "Net-(P2-Pad25)",
-        "95": "Net-(P2-Pad12)",
-        "96": "Net-(P2-Pad26)",
-        "97": "Net-(P2-Pad13)",
-        "98": "Net-(P2-Pad14)",
-        "99": "Net-(U5-Pad1)",
-        "100": "Net-(U5-Pad10)",
-        "101": "Net-(U5-Pad2)",
-        "102": "Net-(U5-Pad11)",
-        "103": "Net-(U5-Pad3)",
-        "104": "Net-(U5-Pad6)",
-        "105": "Net-(U5-Pad15)",
-        "106": "Net-(U5-Pad7)",
-        "107": "Net-(U5-Pad16)",
-        "108": "Net-(U5-Pad8)",
-        "109": "Net-(U5-Pad17)",
-        "110": "Net-(U5-Pad9)",
-        "111": "Net-(U5-Pad18)"
+        "1": {
+            "name": "/CTS",
+            "net_class": "Default"
+        },
+        "2": {
+            "name": "/DTR",
+            "net_class": "Default"
+        },
+        "3": {
+            "name": "/PC-CLOCK-OUT",
+            "net_class": "Default"
+        },
+        "4": {
+            "name": "/TXD",
+            "net_class": "Default"
+        },
+        "5": {
+            "name": "GND",
+            "net_class": "POWER"
+        },
+        "6": {
+            "name": "Net-(C2-Pad1)",
+            "net_class": "Default"
+        },
+        "7": {
+            "name": "Net-(C4-Pad1)",
+            "net_class": "Default"
+        },
+        "8": {
+            "name": "Net-(C5-Pad1)",
+            "net_class": "Default"
+        },
+        "9": {
+            "name": "Net-(C9-Pad2)",
+            "net_class": "Default"
+        },
+        "10": {
+            "name": "Net-(D11-Pad1)",
+            "net_class": "Default"
+        },
+        "11": {
+            "name": "Net-(D11-Pad2)",
+            "net_class": "Default"
+        },
+        "12": {
+            "name": "Net-(Q1-Pad2)",
+            "net_class": "Default"
+        },
+        "13": {
+            "name": "Net-(Q2-Pad3)",
+            "net_class": "Default"
+        },
+        "14": {
+            "name": "Net-(Q3-Pad2)",
+            "net_class": "Default"
+        },
+        "15": {
+            "name": "Net-(R12-Pad1)",
+            "net_class": "Default"
+        },
+        "16": {
+            "name": "Net-(R13-Pad1)",
+            "net_class": "Default"
+        },
+        "17": {
+            "name": "Net-(R15-Pad1)",
+            "net_class": "Default"
+        },
+        "18": {
+            "name": "Net-(R16-Pad1)",
+            "net_class": "Default"
+        },
+        "19": {
+            "name": "Net-(R8-Pad1)",
+            "net_class": "Default"
+        },
+        "20": {
+            "name": "Net-(RV1-Pad2)",
+            "net_class": "Default"
+        },
+        "21": {
+            "name": "VCC",
+            "net_class": "POWER"
+        },
+        "22": {
+            "name": "VPP",
+            "net_class": "Default"
+        },
+        "23": {
+            "name": "/pic_sockets/VCC_PIC",
+            "net_class": "Default"
+        },
+        "24": {
+            "name": "Net-(D1-Pad2)",
+            "net_class": "Default"
+        },
+        "25": {
+            "name": "Net-(D4-Pad2)",
+            "net_class": "Default"
+        },
+        "26": {
+            "name": "Net-(D8-Pad2)",
+            "net_class": "Default"
+        },
+        "27": {
+            "name": "Net-(D9-Pad2)",
+            "net_class": "Default"
+        },
+        "28": {
+            "name": "Net-(D12-Pad2)",
+            "net_class": "Default"
+        },
+        "29": {
+            "name": "/VPP/MCLR",
+            "net_class": "Default"
+        },
+        "30": {
+            "name": "/CLOCK-RB6",
+            "net_class": "Default"
+        },
+        "31": {
+            "name": "/DATA-RB7",
+            "net_class": "Default"
+        },
+        "32": {
+            "name": "Net-(D2-Pad2)",
+            "net_class": "Default"
+        },
+        "33": {
+            "name": "Net-(D6-Pad2)",
+            "net_class": "Default"
+        },
+        "34": {
+            "name": "Net-(D10-Pad2)",
+            "net_class": "Default"
+        },
+        "35": {
+            "name": "Net-(P3-Pad2)",
+            "net_class": "Default"
+        },
+        "36": {
+            "name": "Net-(P3-Pad3)",
+            "net_class": "Default"
+        },
+        "37": {
+            "name": "Net-(P3-Pad4)",
+            "net_class": "Default"
+        },
+        "38": {
+            "name": "Net-(P3-Pad5)",
+            "net_class": "Default"
+        },
+        "39": {
+            "name": "Net-(P3-Pad6)",
+            "net_class": "Default"
+        },
+        "40": {
+            "name": "Net-(P3-Pad7)",
+            "net_class": "Default"
+        },
+        "41": {
+            "name": "Net-(P3-Pad9)",
+            "net_class": "Default"
+        },
+        "42": {
+            "name": "Net-(P3-Pad10)",
+            "net_class": "Default"
+        },
+        "43": {
+            "name": "Net-(P3-Pad13)",
+            "net_class": "Default"
+        },
+        "44": {
+            "name": "Net-(P3-Pad14)",
+            "net_class": "Default"
+        },
+        "45": {
+            "name": "Net-(P3-Pad15)",
+            "net_class": "Default"
+        },
+        "46": {
+            "name": "Net-(P3-Pad16)",
+            "net_class": "Default"
+        },
+        "47": {
+            "name": "Net-(P3-Pad17)",
+            "net_class": "Default"
+        },
+        "48": {
+            "name": "Net-(P3-Pad18)",
+            "net_class": "Default"
+        },
+        "49": {
+            "name": "Net-(P3-Pad19)",
+            "net_class": "Default"
+        },
+        "50": {
+            "name": "Net-(P3-Pad20)",
+            "net_class": "Default"
+        },
+        "51": {
+            "name": "Net-(P3-Pad21)",
+            "net_class": "Default"
+        },
+        "52": {
+            "name": "Net-(P3-Pad22)",
+            "net_class": "Default"
+        },
+        "53": {
+            "name": "Net-(P3-Pad23)",
+            "net_class": "Default"
+        },
+        "54": {
+            "name": "Net-(P3-Pad24)",
+            "net_class": "Default"
+        },
+        "55": {
+            "name": "Net-(P3-Pad25)",
+            "net_class": "Default"
+        },
+        "56": {
+            "name": "Net-(P3-Pad26)",
+            "net_class": "Default"
+        },
+        "57": {
+            "name": "Net-(P3-Pad27)",
+            "net_class": "Default"
+        },
+        "58": {
+            "name": "Net-(P3-Pad28)",
+            "net_class": "Default"
+        },
+        "59": {
+            "name": "Net-(P3-Pad29)",
+            "net_class": "Default"
+        },
+        "60": {
+            "name": "Net-(P3-Pad30)",
+            "net_class": "Default"
+        },
+        "61": {
+            "name": "Net-(P3-Pad33)",
+            "net_class": "Default"
+        },
+        "62": {
+            "name": "Net-(P3-Pad34)",
+            "net_class": "Default"
+        },
+        "63": {
+            "name": "Net-(P3-Pad35)",
+            "net_class": "Default"
+        },
+        "64": {
+            "name": "Net-(P3-Pad36)",
+            "net_class": "Default"
+        },
+        "65": {
+            "name": "Net-(P3-Pad37)",
+            "net_class": "Default"
+        },
+        "66": {
+            "name": "Net-(P3-Pad38)",
+            "net_class": "Default"
+        },
+        "67": {
+            "name": "Net-(J1-Pad1)",
+            "net_class": "Default"
+        },
+        "68": {
+            "name": "Net-(J1-Pad2)",
+            "net_class": "Default"
+        },
+        "69": {
+            "name": "Net-(J1-Pad6)",
+            "net_class": "Default"
+        },
+        "70": {
+            "name": "Net-(J1-Pad9)",
+            "net_class": "Default"
+        },
+        "71": {
+            "name": "Net-(U6-Pad5)",
+            "net_class": "Default"
+        },
+        "72": {
+            "name": "Net-(U6-Pad2)",
+            "net_class": "Default"
+        },
+        "73": {
+            "name": "Net-(U6-Pad3)",
+            "net_class": "Default"
+        },
+        "74": {
+            "name": "Net-(U1-Pad7)",
+            "net_class": "Default"
+        },
+        "75": {
+            "name": "Net-(U4-Pad3)",
+            "net_class": "Default"
+        },
+        "76": {
+            "name": "Net-(U4-Pad4)",
+            "net_class": "Default"
+        },
+        "77": {
+            "name": "Net-(P2-Pad15)",
+            "net_class": "Default"
+        },
+        "78": {
+            "name": "Net-(P2-Pad2)",
+            "net_class": "Default"
+        },
+        "79": {
+            "name": "Net-(P2-Pad16)",
+            "net_class": "Default"
+        },
+        "80": {
+            "name": "Net-(P2-Pad3)",
+            "net_class": "Default"
+        },
+        "81": {
+            "name": "Net-(P2-Pad17)",
+            "net_class": "Default"
+        },
+        "82": {
+            "name": "Net-(P2-Pad4)",
+            "net_class": "Default"
+        },
+        "83": {
+            "name": "Net-(P2-Pad18)",
+            "net_class": "Default"
+        },
+        "84": {
+            "name": "Net-(P2-Pad5)",
+            "net_class": "Default"
+        },
+        "85": {
+            "name": "Net-(P2-Pad6)",
+            "net_class": "Default"
+        },
+        "86": {
+            "name": "Net-(P2-Pad7)",
+            "net_class": "Default"
+        },
+        "87": {
+            "name": "Net-(P2-Pad21)",
+            "net_class": "Default"
+        },
+        "88": {
+            "name": "Net-(P2-Pad22)",
+            "net_class": "Default"
+        },
+        "89": {
+            "name": "Net-(P2-Pad9)",
+            "net_class": "Default"
+        },
+        "90": {
+            "name": "Net-(P2-Pad23)",
+            "net_class": "Default"
+        },
+        "91": {
+            "name": "Net-(P2-Pad10)",
+            "net_class": "Default"
+        },
+        "92": {
+            "name": "Net-(P2-Pad24)",
+            "net_class": "Default"
+        },
+        "93": {
+            "name": "Net-(P2-Pad11)",
+            "net_class": "Default"
+        },
+        "94": {
+            "name": "Net-(P2-Pad25)",
+            "net_class": "Default"
+        },
+        "95": {
+            "name": "Net-(P2-Pad12)",
+            "net_class": "Default"
+        },
+        "96": {
+            "name": "Net-(P2-Pad26)",
+            "net_class": "Default"
+        },
+        "97": {
+            "name": "Net-(P2-Pad13)",
+            "net_class": "Default"
+        },
+        "98": {
+            "name": "Net-(P2-Pad14)",
+            "net_class": "Default"
+        },
+        "99": {
+            "name": "Net-(U5-Pad1)",
+            "net_class": "Default"
+        },
+        "100": {
+            "name": "Net-(U5-Pad10)",
+            "net_class": "Default"
+        },
+        "101": {
+            "name": "Net-(U5-Pad2)",
+            "net_class": "Default"
+        },
+        "102": {
+            "name": "Net-(U5-Pad11)",
+            "net_class": "Default"
+        },
+        "103": {
+            "name": "Net-(U5-Pad3)",
+            "net_class": "Default"
+        },
+        "104": {
+            "name": "Net-(U5-Pad6)",
+            "net_class": "Default"
+        },
+        "105": {
+            "name": "Net-(U5-Pad15)",
+            "net_class": "Default"
+        },
+        "106": {
+            "name": "Net-(U5-Pad7)",
+            "net_class": "Default"
+        },
+        "107": {
+            "name": "Net-(U5-Pad16)",
+            "net_class": "Default"
+        },
+        "108": {
+            "name": "Net-(U5-Pad8)",
+            "net_class": "Default"
+        },
+        "109": {
+            "name": "Net-(U5-Pad17)",
+            "net_class": "Default"
+        },
+        "110": {
+            "name": "Net-(U5-Pad9)",
+            "net_class": "Default"
+        },
+        "111": {
+            "name": "Net-(U5-Pad18)",
+            "net_class": "Default"
+        }
     },
     "net_classes": {
         "Default": {
@@ -306,7 +639,7 @@
                 125.73
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "30"
         },
         {
@@ -315,7 +648,7 @@
                 54.61
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "30"
         },
         {
@@ -324,7 +657,7 @@
                 110.49
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "30"
         },
         {
@@ -333,7 +666,7 @@
                 123.19
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "31"
         },
         {
@@ -342,7 +675,7 @@
                 52.07
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "31"
         },
         {
@@ -351,7 +684,7 @@
                 114.3
             ],
             "layer": "top_layer bottom_layer",
-            "size": "1.6",
+            "size": 1.6,
             "net": "31"
         }
     ],
