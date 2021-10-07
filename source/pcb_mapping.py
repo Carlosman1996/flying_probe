@@ -513,16 +513,40 @@ class PCBMappingKiCAD:
 
             # Append pads information:
             for pad_key, pad_info in module_info["pads"].items():
+                # Get shape type:
+                if pad_info["shape"] in ["circle", "oval"]:
+                    diameter = pad_info["size"][0]
+                else:
+                    diameter = None
+                if pad_info["shape"] == "rect":
+                    dx = pad_info["size"][0] / 2
+                    dy = pad_info["size"][1] / 2
+                    shape_lines = [[pad_info["position"][0] + dx, pad_info["position"][1] + dy],
+                                   [pad_info["position"][0] - dx, pad_info["position"][1] + dy],
+                                   [pad_info["position"][0] - dx, pad_info["position"][1] - dy],
+                                   [pad_info["position"][0] - dx, pad_info["position"][1] - dy]]
+                else:
+                    shape_lines = None
+
+                # Get net names:
+                if "net_name" in list(pad_info.keys()):
+                    net_id = str(pad_info["net_name"].split(" ")[0])
+                    net_name = pcb_data_dict["nets"][net_id]["name"]
+                    net_class = pcb_data_dict["nets"][net_id]["net_class"]
+                else:
+                    net_name = None
+                    net_class = None
+
                 pcb_info_df = append_dict_in_df(pcb_info_df,
                                                 element_type="pad",
                                                 name=module_key + "_pad_" + pad_key,
-                                                layer="",
-                                                net_name="",
-                                                net_class="",
-                                                drill=None,
-                                                diameter=None,
-                                                position=None,
-                                                shape_lines=None,
+                                                layer=pad_info["layer"],
+                                                net_name=net_name,
+                                                net_class=net_class,
+                                                drill=pad_info["drill"],
+                                                diameter=diameter,
+                                                position=pad_info["position"],
+                                                shape_lines=shape_lines,
                                                 shape_circles=None,
                                                 shape_arcs=None,
                                                 height=0)
@@ -600,6 +624,7 @@ if __name__ == "__main__":
     print(pcb_df)
     with open(ROOT_PATH + "//inputs//pcb_data.json", 'w') as json_obj:
         json.dump(pcb_info_processed, json_obj, indent=4)
+    DataframeOperations.save_csv(ROOT_PATH + "//inputs//pcb_data.csv", pcb_df)
 
     # pcb_draw_obj = PCBDrawing()
     # pcb_draw_obj.run(pcb_info)
