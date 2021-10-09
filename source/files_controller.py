@@ -15,8 +15,7 @@ class InputsController:
         # Set files paths:
         self.inputs_data_path = inputs_path + "inputs_data.json"
         self.conf_data_path = inputs_path + "configuration_data.json"
-        self.pcb_path = inputs_path + "API_info_pcb.csv"   # Hardcoded
-        # self.pcb_path = ROOT_PATH + "//inputs//*.kicad_pcb"
+        self.pcb_path = inputs_path + "pcb_file.kicad_pcb"
 
     def read_inputs_data(self, data=None):
         if data is None:

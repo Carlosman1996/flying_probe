@@ -1,7 +1,7 @@
 import math
 import re
 import json
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -243,8 +243,8 @@ class PCBMappingKiCAD:
                         values_dict = {"position": self.refer_point_to_origin([0, 0], point, angle),
                                        "layer": layer_name,
                                        "diameters": float(search_text_between_string(first_string="\\(size ",
-                                                                                second_string="\\)",
-                                                                                line_string=line_info)),
+                                                                                     second_string="\\)",
+                                                                                     line_string=line_info)),
                                        "net": search_text_between_string(first_string="\\(net ", second_string="\\)",
                                                                          line_string=line_info)}
                         pcb_data_dict["vias"].append(values_dict)
@@ -491,6 +491,7 @@ class PCBMappingKiCAD:
 
         # Append components information:
         for module_key, module_info in pcb_data_dict["modules"].items():
+            # TODO: join all information in one list -
             # Create lines list:
             line_list = []
             for line in module_info["placement_outlines"]["lines"]:
@@ -525,7 +526,7 @@ class PCBMappingKiCAD:
             # Append pads information:
             for pad_key, pad_info in module_info["pads"].items():
                 # Get shape type:
-                if pad_info["shape"] in ["circles", "oval"]:
+                if pad_info["shape"] in ["circle", "oval"]:
                     diameters = pad_info["diameters"]
                 else:
                     diameters = None
@@ -564,6 +565,11 @@ class PCBMappingKiCAD:
                                                 shape_lines=shape_lines)
 
         return pcb_info_df
+
+    def run(self):
+        pcb_data_dict = self.pcb_reader()
+        pcb_data_df = self.dataframe_constructor(pcb_data_dict)
+        return pcb_data_df
 
 
 class PCBDrawing:
@@ -619,7 +625,6 @@ class PCBDrawing:
                 self.draw_ellipse(draw_obj, pcb_element.position, pcb_element.diameters, factor)
 
             # Draw pad:
-            # TODO: PADS MISSING LIKE R18-1
             if pcb_element.type == "pad":
                 if pcb_element.diameters is None:
                     # Rectangular pad:

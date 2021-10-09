@@ -7,7 +7,7 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class ProbeController:
-    def __init__(self, oscilloscope_ctrl, engines_ctrl):
+    def __init__(self, oscilloscope_ctrl, engines_ctrl, logger_level="INFO"):
         # General attributes:
         self.probe_name = None
         self.configuration = {}
@@ -15,7 +15,7 @@ class ProbeController:
                                  'y': 0}
 
         # Set logger:
-        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level="DEBUG")
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
         # Probe controller must inherit the oscilloscope and engines controller:
         self.engines_ctrl = engines_ctrl
@@ -31,7 +31,7 @@ class ProbeController:
         The trajectory is a list of coordinates, so the software must calculate the incremental values to move the
         engines.
         """
-        self.logger.set_message(level="CRITICAL", message_level="SUBSECTION", message=test_point_name)
+        self.logger.set_message(level="INFO", message_level="SUBSECTION", message=test_point_name)
 
         # Move probe to test point following the trajectory:
         for coordinates in trajectory:

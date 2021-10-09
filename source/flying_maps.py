@@ -17,4 +17,8 @@ class FlyingMaps:
                       {'x': 20, 'y': -1},
                       {'x': -10, 'y': 40}]
         test_points_data["trajectories"] = test_points_data.apply(lambda row: trajectory, axis=1)
+
+        # TODO: sort test points using first vias, last option is pads
+        # TODO: total trajectory: minimum distance
+
         return test_points_data
