@@ -96,20 +96,24 @@ class PCBMappingKiCAD:
         self.placement_outlines_layers = ["*.SilkS", "F.SilkS", "B.SilkS"]
         self.pads_layers = ["*.Cu *.Mask", "F.Mask", "B.Mask"]
         self.vias_layers = ["top_layer bottom_layer", "top_layer", "bottom_layer"]
+        self.modules_layers = ["top_layer", "bottom_layer"]
 
         # Dataframe:
-        self.df_columns = ["type", "name", "layer", "net_name", "net_class", "drill", "diameter", "position",
+        self.df_columns = ["type", "name", "layer", "net_name", "net_class", "drill", "diameters", "position",
                            "shape_lines", "shape_circles", "shape_arcs", "height"]
 
     @staticmethod
-    def rotate_point_around_origin(point_increments, angle_degrees):
+    def refer_point_to_origin(reference_point, particular_point, angle_degrees):
         angle_radians = angle_degrees * math.pi / 180
         point_rotate = [0, 0]
 
         # Rotation counterclockwise:
-        point_rotate[0] = math.cos(angle_radians) * point_increments[0] + math.sin(angle_radians) * point_increments[1]
-        point_rotate[1] = -math.sin(angle_radians) * point_increments[0] + math.cos(angle_radians) * point_increments[1]
-        return point_rotate
+        point_rotate[0] = math.cos(angle_radians) * particular_point[0] + math.sin(angle_radians) * particular_point[1]
+        point_rotate[1] = -math.sin(angle_radians) * particular_point[0] + math.cos(angle_radians) * particular_point[1]
+
+        # Absolute point:
+        absolute_point = [reference_point[0] + point_rotate[0], reference_point[1] + point_rotate[1]]
+        return absolute_point
 
     def pcb_reader(self):
         # Structure modules information:
@@ -144,26 +148,28 @@ class PCBMappingKiCAD:
         for line_info in pcb_data:
             # Save PCB borders:
             if line_info[0:11] == "  (gr_line ":
-                values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                          line_string=line_info)
-                values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                        line_string=line_info)
-                if values_end is not None and values_start is not None:
-                    start_point = [float(number) for number in values_start.split(" ")]
-                    end_point = [float(number) for number in values_end.split(" ")]
+                layer_name = check_element_layer(line_string=line_info)
+                if layer_name in self.borders_layers:
+                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                              line_string=line_info)
+                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                            line_string=line_info)
+                    if values_end is not None and values_start is not None:
+                        start_point = [float(number) for number in values_start.split(" ")]
+                        end_point = [float(number) for number in values_end.split(" ")]
 
-                    # Read angle:
-                    # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                    #                                          line_string=line_info))
-                    angle = 0
+                        # Read angle:
+                        # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                        #                                          line_string=line_info))
+                        angle = 0
 
-                    # Rotate points before save them:
-                    values_dict = {"layer": check_element_layer(line_string=line_info),
-                                   "start": self.rotate_point_around_origin(start_point, angle),
-                                   "end": self.rotate_point_around_origin(end_point, angle)}
-                    pcb_data_dict["borders"].append(values_dict)
-                else:
-                    pcb_data_dict["borders"].append(None)
+                        # Rotate points before save them:
+                        values_dict = {"layer": layer_name,
+                                       "start": self.refer_point_to_origin([0, 0], start_point, angle),
+                                       "end": self.refer_point_to_origin([0, 0], end_point, angle)}
+                        pcb_data_dict["borders"].append(values_dict)
+                    else:
+                        pcb_data_dict["borders"].append(None)
 
             # Save PCB nets:
             if line_info[0:7] == "  (net ":
@@ -184,15 +190,15 @@ class PCBMappingKiCAD:
             if line_info[0:13] == "  (net_class ":
                 netclass_name = search_text_between_string(first_string="\\(net_class ", second_string="\\ ",
                                                            line_string=line_info)
-                pcb_data_dict["net_classes"][netclass_name] = {"via_diameter": None,
-                                                                     "via_drill": None,
-                                                                     "uvia_diameter": None,
-                                                                     "uvia_drill": None,
-                                                                     "nets": []}
+                pcb_data_dict["net_classes"][netclass_name] = {"via_size": None,
+                                                               "via_drill": None,
+                                                               "uvia_size": None,
+                                                               "uvia_drill": None,
+                                                               "nets": []}
                 append_netclasses_data = True
             elif line_info[0:4] == "    " and append_netclasses_data:
                 if line_info[0:13] == "    (via_dia ":
-                    pcb_data_dict["net_classes"][netclass_name]["via_diameter"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["via_size"] = \
                         search_text_between_string(first_string="\\(via_dia ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:15] == "    (via_drill ":
@@ -200,7 +206,7 @@ class PCBMappingKiCAD:
                         search_text_between_string(first_string="\\(via_drill ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:14] == "    (uvia_dia ":
-                    pcb_data_dict["net_classes"][netclass_name]["uvia_diameter"] = \
+                    pcb_data_dict["net_classes"][netclass_name]["uvia_size"] = \
                         search_text_between_string(first_string="\\(uvia_dia ", second_string="\\)",
                                                    line_string=line_info)
                 elif line_info[0:15] == "    (uvia_drill ":
@@ -221,32 +227,36 @@ class PCBMappingKiCAD:
 
             # Save PCB vias:
             if line_info[0:7] == "  (via ":
-                values_point = search_text_between_string(first_string="\\(at ", second_string="\\)",
-                                                          line_string=line_info)
-                if values_point is not None:
-                    point = [float(number) for number in values_point.split(" ")]
+                layer_name = check_element_layer(line_string=line_info)
+                if layer_name in self.vias_layers:
+                    values_point = search_text_between_string(first_string="\\(at ", second_string="\\)",
+                                                              line_string=line_info)
+                    if values_point is not None:
+                        point = [float(number) for number in values_point.split(" ")]
 
-                    # Read angle:
-                    # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                    #                                          line_string=line_info))
-                    angle = 0
+                        # Read angle:
+                        # angle = float(search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                        #                                          line_string=line_info))
+                        angle = 0
 
-                    # Rotate points before save them:
-                    values_dict = {"position": self.rotate_point_around_origin(point, angle),
-                                   "layer": check_element_layer(line_string=line_info),
-                                   "size": float(search_text_between_string(first_string="\\(size ",
-                                                                            second_string="\\)",
-                                                                            line_string=line_info)),
-                                   "net": search_text_between_string(first_string="\\(net ", second_string="\\)",
-                                                                     line_string=line_info)}
-                    pcb_data_dict["vias"].append(values_dict)
-                else:
-                    pcb_data_dict["vias"].append(None)
+                        # Rotate points before save them:
+                        values_dict = {"position": self.refer_point_to_origin([0, 0], point, angle),
+                                       "layer": layer_name,
+                                       "diameters": float(search_text_between_string(first_string="\\(size ",
+                                                                                second_string="\\)",
+                                                                                line_string=line_info)),
+                                       "net": search_text_between_string(first_string="\\(net ", second_string="\\)",
+                                                                         line_string=line_info)}
+                        pcb_data_dict["vias"].append(values_dict)
+                    else:
+                        pcb_data_dict["vias"].append(None)
 
             # Module starts with the string "  (module":
             if line_info[0:10] == "  (module ":
-                append_modules_data = True
-                modules_data.append([])
+                layer_name = check_element_layer(line_string=line_info)
+                if layer_name in self.modules_layers:
+                    append_modules_data = True
+                    modules_data.append([])
 
             # If a module has been detected, the line must be appended in the corresponding group:
             if append_modules_data:
@@ -258,9 +268,9 @@ class PCBMappingKiCAD:
 
         for index, module_data in enumerate(modules_data):
             reference = f"Unknown_module_{index}"
-            module_info = {"placement_outlines": {"circle": [],
-                                                  "line": [],
-                                                  "arc": []
+            module_info = {"placement_outlines": {"circles": [],
+                                                  "lines": [],
+                                                  "arcs": []
                                                   },
                            "pads": {},
                            "rotation": 0
@@ -293,96 +303,120 @@ class PCBMappingKiCAD:
 
                 # Search placement outline if it is in silkscreen layers:
                 if line_info[0:15] == "    (fp_circle ":
-                    values_center = search_text_between_string(first_string="\\(center ", second_string="\\)",
-                                                               line_string=line_info)
-                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                            line_string=line_info)
-                    if values_end is not None and values_center is not None:
-                        center_point = [float(number) for number in values_center.split(" ")]
-                        end_point = [float(number) for number in values_end.split(" ")]
+                    layer_name = check_element_layer(line_string=line_info)
+                    if layer_name in self.placement_outlines_layers:
+                        values_center = search_text_between_string(first_string="\\(center ", second_string="\\)",
+                                                                   line_string=line_info)
+                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                                line_string=line_info)
+                        if values_end is not None and values_center is not None:
+                            relative_center_point = [float(number) for number in values_center.split(" ")]
+                            relative_end_point = [float(number) for number in values_end.split(" ")]
+                            center_point = self.refer_point_to_origin(module_info["position"], relative_center_point,
+                                                                      module_info["rotation"])
+                            end_point = self.refer_point_to_origin(module_info["position"], relative_end_point,
+                                                                   module_info["rotation"])
 
-                        # Rotate points before save them:
-                        values_dict = {"layer": check_element_layer(line_string=line_info),
-                                       "center": self.rotate_point_around_origin(center_point, module_info["rotation"]),
-                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
-                        module_info["placement_outlines"]["circle"].append(values_dict)
-                    else:
-                        module_info["placement_outlines"]["circle"].append(None)
+                            radius = math.sqrt((end_point[0] - center_point[0]) ** 2 + (end_point[1] - center_point[1]) ** 2)
+
+                            # Rotate points before save them:
+                            values_dict = {"layer": layer_name,
+                                           "center": center_point,
+                                           "radius": radius}
+                            module_info["placement_outlines"]["circles"].append(values_dict)
+                        else:
+                            module_info["placement_outlines"]["circles"].append(None)
                 elif line_info[0:12] == "    (fp_arc ":
-                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                              line_string=line_info)
-                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                            line_string=line_info)
-                    values_angle = search_text_between_string(first_string="\\(angle ", second_string="\\)",
-                                                              line_string=line_info)
-                    if values_start is not None and values_end is not None and values_angle is not None:
-                        start_point = [float(number) for number in values_start.split(" ")]
-                        end_point = [float(number) for number in values_end.split(" ")]
-                        angle = float(values_angle)
+                    layer_name = check_element_layer(line_string=line_info)
+                    if layer_name in self.placement_outlines_layers:
+                        values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                                  line_string=line_info)
+                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                                line_string=line_info)
+                        values_angle = search_text_between_string(first_string="\\(angle ", second_string="\\)",
+                                                                  line_string=line_info)
+                        if values_start is not None and values_end is not None and values_angle is not None:
+                            relative_start_point = [float(number) for number in values_start.split(" ")]
+                            relative_end_point = [float(number) for number in values_end.split(" ")]
 
-                        # Rotate points before save them:
-                        values_dict = {"layer": check_element_layer(line_string=line_info),
-                                       "start": self.rotate_point_around_origin(start_point, module_info["rotation"]),
-                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"]),
-                                       "angle": angle}
-                        module_info["placement_outlines"]["arc"].append(values_dict)
-                    else:
-                        module_info["placement_outlines"]["arc"].append(None)
+                            start_point = self.refer_point_to_origin(module_info["position"], relative_start_point,
+                                                                     module_info["rotation"])
+                            end_point = self.refer_point_to_origin(module_info["position"], relative_end_point,
+                                                                   module_info["rotation"])
+
+                            radius = math.sqrt((end_point[0] - start_point[0]) ** 2 + (end_point[1] - start_point[1]) ** 2)
+                            start_angle = math.atan2(start_point[1], start_point[0]) * 180 / math.pi
+                            end_angle = math.atan2(end_point[1], end_point[0]) * 180 / math.pi
+
+                            # Rotate points before save them:
+                            values_dict = {"layer": layer_name,
+                                           "start": start_point,
+                                           "end": end_point,
+                                           "radius": radius,
+                                           "angles": [start_angle, end_angle]}
+                            module_info["placement_outlines"]["arcs"].append(values_dict)
+                        else:
+                            module_info["placement_outlines"]["arcs"].append(None)
                 elif line_info[0:13] == "    (fp_line ":
-                    values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
-                                                              line_string=line_info)
-                    values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
-                                                            line_string=line_info)
-                    if values_end is not None and values_start is not None:
-                        start_point = [float(number) for number in values_start.split(" ")]
-                        end_point = [float(number) for number in values_end.split(" ")]
+                    layer_name = check_element_layer(line_string=line_info)
+                    if layer_name in self.placement_outlines_layers:
+                        values_start = search_text_between_string(first_string="\\(start ", second_string="\\)",
+                                                                  line_string=line_info)
+                        values_end = search_text_between_string(first_string="\\(end ", second_string="\\)",
+                                                                line_string=line_info)
+                        if values_end is not None and values_start is not None:
+                            start_point = [float(number) for number in values_start.split(" ")]
+                            end_point = [float(number) for number in values_end.split(" ")]
 
-                        # Rotate points before save them:
-                        values_dict = {"layer": check_element_layer(line_string=line_info),
-                                       "start": self.rotate_point_around_origin(start_point,
-                                                                                module_info["rotation"]),
-                                       "end": self.rotate_point_around_origin(end_point, module_info["rotation"])}
-                        module_info["placement_outlines"]["line"].append(values_dict)
-                    else:
-                        module_info["placement_outlines"]["line"].append(None)
+                            # Rotate points before save them:
+                            values_dict = {"layer": layer_name,
+                                           "start": self.refer_point_to_origin(module_info["position"], start_point,
+                                                                               module_info["rotation"]),
+                                           "end": self.refer_point_to_origin(module_info["position"], end_point,
+                                                                             module_info["rotation"])}
+                            module_info["placement_outlines"]["lines"].append(values_dict)
+                        else:
+                            module_info["placement_outlines"]["lines"].append(None)
 
                 # Search pad:
                 if line_info[0:9] == "    (pad ":
-                    # Check if pad is in a layer allowed:
-                    simplified_line = search_text_between_string(first_string='\\(pad ', second_string=' \\(at',
-                                                                 line_string=line_info)
-                    split_line_info = simplified_line.split(" ")
+                    layer_name = check_element_layer(line_string=line_info)
+                    if layer_name in self.pads_layers:
+                        simplified_line = search_text_between_string(first_string='\\(pad ', second_string=' \\(at',
+                                                                     line_string=line_info)
+                        split_line_info = simplified_line.split(" ")
 
-                    pad_number = split_line_info[0]
-                    if pad_number == '\"\"':
-                        pad_number = "unknown"
-                    module_info["pads"][pad_number] = {"layer": check_element_layer(line_string=line_info),
-                                                       "type": split_line_info[1],
-                                                       "shape": split_line_info[2]}
+                        pad_number = split_line_info[0]
+                        if pad_number == '\"\"':
+                            pad_number = "unknown"
+                        module_info["pads"][str(pad_number)] = {"layer": layer_name,
+                                                                "type": split_line_info[1],
+                                                                "shape": split_line_info[2]}
 
-                    pad_position = search_text_between_string(first_string="\\(at ", second_string="\\)",
-                                                              line_string=line_info)
-                    module_info["pads"][pad_number]["position"] = [float(number) for number in pad_position.split(" ")]
-                    # Separate rotation from position:
-                    if len(module_info["pads"][pad_number]["position"]) == 3:
-                        rotation = module_info["pads"][pad_number]["position"][2]
-                        position = module_info["pads"][pad_number]["position"][:2]
+                        pad_position_string = search_text_between_string(first_string="\\(at ", second_string="\\)",
+                                                                         line_string=line_info)
+                        pad_position = [float(number) for number in pad_position_string.split(" ")]
+                        # Separate rotation from position:
+                        if len(pad_position) == 3:
+                            position = pad_position[:2]
+                            rotation = pad_position[2]
+                        else:
+                            position = pad_position
+                            rotation = 0
+                        module_info["pads"][pad_number]["position"] = \
+                            self.refer_point_to_origin(module_info["position"], position, rotation)
                         module_info["pads"][pad_number]["rotation"] = rotation
-                        module_info["pads"][pad_number]["position"] = self.rotate_point_around_origin(position,
-                                                                                                      rotation)
-                    else:
-                        module_info["pads"][pad_number]["rotation"] = 0
 
-                    pad_size = search_text_between_string(first_string="\\(size ", second_string="\\)",
-                                                          line_string=line_info)
-                    module_info["pads"][pad_number]["size"] = [float(number) for number in pad_size.split(" ")]
+                        pad_size = search_text_between_string(first_string="\\(size ", second_string="\\)",
+                                                              line_string=line_info)
+                        module_info["pads"][pad_number]["diameters"] = [float(number) for number in pad_size.split(" ")]
 
-                    pad_drill = search_text_between_string(first_string="\\(drill ", second_string="\\)",
-                                                           line_string=line_info)
-                    if pad_drill is not None:
-                        module_info["pads"][pad_number]["drill"] = float(pad_drill)
-                    else:
-                        module_info["pads"][pad_number]["drill"] = None
+                        pad_drill = search_text_between_string(first_string="\\(drill ", second_string="\\)",
+                                                               line_string=line_info)
+                        if pad_drill is not None:
+                            module_info["pads"][pad_number]["drill"] = float(pad_drill)
+                        else:
+                            module_info["pads"][pad_number]["drill"] = None
                 # Search nets pads:
                 elif line_info[0:11] == "      (net ":
                     # Check if the net corresponds to a pad:
@@ -397,50 +431,11 @@ class PCBMappingKiCAD:
             pcb_data_dict["modules"][reference] = module_info
         return pcb_data_dict
 
-    @staticmethod
-    def pcb_data_processor(pcb_data_dict):
-        # Convert coordinates from relative to absolute;
-        for module in pcb_data_dict["modules"].values():
-            start_point = module["position"]
-
-            for point in module["placement_outlines"]["line"]:
-                point["start"][0] += start_point[0]
-                point["end"][0] += start_point[0]
-                point["start"][1] += start_point[1]
-                point["end"][1] += start_point[1]
-
-            for point in module["placement_outlines"]["circle"]:
-                radius = math.sqrt((point["end"][0] - point["center"][0])**2 + (point["end"][1] - point["center"][1])**2)
-                point["center"][0] += start_point[0]
-                point["center"][1] += start_point[1]
-                point["end"][0] = start_point[0] + radius
-                point["end"][1] = start_point[1]
-
-            for point in module["placement_outlines"]["arc"]:
-                radius = math.sqrt((point["end"][0] - point["start"][0])**2 + (point["end"][1] - point["start"][1])**2)
-                start_angle = math.atan2(point["start"][1], point["start"][0]) * 180 / math.pi
-                end_angle = math.atan2(point["end"][1], point["end"][0]) * 180 / math.pi
-
-                point["start"][0] += start_point[0]
-                point["start"][1] += start_point[1]
-                point["end"][0] = start_point[0]
-                point["end"][1] = start_point[1]
-                point["angles"] = [start_angle, end_angle]
-
-            for pad_number, par_params in module["pads"].items():
-                par_params["position"][0] += start_point[0]
-                par_params["position"][1] += start_point[1]
-
-        # TODO: remove those components whose layer is not in top/bottom side
-        # TODO: convert all values from mm to m
-
-        return pcb_data_dict
-
     def dataframe_constructor(self, pcb_data_dict):
         pcb_info_df = pd.DataFrame(columns=self.df_columns)
 
         def append_dict_in_df(data_df, element_type="", name="", layer="", net_name="", net_class="", drill=None,
-                              diameter=None, position=None, shape_lines=None, shape_circles=None, shape_arcs=None,
+                              diameters=None, position=None, shape_lines=None, shape_circles=None, shape_arcs=None,
                               height=0):
             data_df = data_df.append({"type": element_type,
                                       "name": name,
@@ -448,7 +443,7 @@ class PCBMappingKiCAD:
                                       "net_name": net_name,
                                       "net_class": net_class,
                                       "drill": drill,
-                                      "diameter": diameter,
+                                      "diameters": diameters,
                                       "position": position,
                                       "shape_lines": shape_lines if shape_lines else [],
                                       "shape_circles": shape_circles if shape_circles else [],
@@ -491,40 +486,60 @@ class PCBMappingKiCAD:
                                             net_name=net_name,
                                             net_class=net_class,
                                             drill=drill,
-                                            diameter=via_info["size"],
+                                            diameters=via_info["diameters"],
                                             position=via_info["position"])
 
         # Append components information:
         for module_key, module_info in pcb_data_dict["modules"].items():
+            # Create lines list:
+            line_list = []
+            for line in module_info["placement_outlines"]["lines"]:
+                line_list.append(line["start"])
+                line_list.append(line["end"])
+
+            # Create circles list:
+            circles_list = []
+            for circle in module_info["placement_outlines"]["circles"]:
+                circles_list.append({"center": circle["center"],
+                                     "radius": circle["radius"]})
+
+            # Create circles list:
+            arcs_list = []
+            for arc in module_info["placement_outlines"]["arcs"]:
+                arcs_list.append({"start": arc["start"],
+                                  "end": arc["end"],
+                                  "radius": arc["radius"],
+                                  "angles": arc["angles"]})
+
             # Append modules information:
             pcb_info_df = append_dict_in_df(pcb_info_df,
                                             element_type="module",
                                             name=module_key,
-                                            layer="",
-                                            net_name="",
-                                            net_class="",
-                                            drill=None,
-                                            diameter=None,
-                                            position=None,
-                                            shape_lines=None,
-                                            shape_circles=None,
-                                            shape_arcs=None,
+                                            layer=module_info["layer"],
+                                            position=module_info["position"],
+                                            shape_lines=line_list,
+                                            shape_circles=circles_list,
+                                            shape_arcs=arcs_list,
                                             height=0)
 
             # Append pads information:
             for pad_key, pad_info in module_info["pads"].items():
                 # Get shape type:
-                if pad_info["shape"] in ["circle", "oval"]:
-                    diameter = pad_info["size"][0]
+                if pad_info["shape"] in ["circles", "oval"]:
+                    diameters = pad_info["diameters"]
                 else:
-                    diameter = None
+                    diameters = None
                 if pad_info["shape"] == "rect":
-                    dx = pad_info["size"][0] / 2
-                    dy = pad_info["size"][1] / 2
+                    dx = pad_info["diameters"][0] / 2
+                    dy = pad_info["diameters"][1] / 2
                     shape_lines = [[pad_info["position"][0] + dx, pad_info["position"][1] + dy],
                                    [pad_info["position"][0] - dx, pad_info["position"][1] + dy],
+                                   [pad_info["position"][0] - dx, pad_info["position"][1] + dy],
                                    [pad_info["position"][0] - dx, pad_info["position"][1] - dy],
-                                   [pad_info["position"][0] - dx, pad_info["position"][1] - dy]]
+                                   [pad_info["position"][0] - dx, pad_info["position"][1] - dy],
+                                   [pad_info["position"][0] + dx, pad_info["position"][1] - dy],
+                                   [pad_info["position"][0] + dx, pad_info["position"][1] - dy],
+                                   [pad_info["position"][0] + dx, pad_info["position"][1] + dy]]
                 else:
                     shape_lines = None
 
@@ -544,64 +559,85 @@ class PCBMappingKiCAD:
                                                 net_name=net_name,
                                                 net_class=net_class,
                                                 drill=pad_info["drill"],
-                                                diameter=diameter,
+                                                diameters=diameters,
                                                 position=pad_info["position"],
-                                                shape_lines=shape_lines,
-                                                shape_circles=None,
-                                                shape_arcs=None,
-                                                height=0)
+                                                shape_lines=shape_lines)
 
         return pcb_info_df
 
 
 class PCBDrawing:
+    @staticmethod
+    def draw_lines(draw_obj, shape_points, factor=1):
+        line_index = 0
+        for _ in range(0, int(len(shape_points) / 2)):
+            current_point = shape_points[line_index]
+            next_point = shape_points[line_index + 1]
+            line_index += 2
+
+            draw_obj.line((current_point[0] * factor, current_point[1] * factor,
+                           next_point[0] * factor, next_point[1] * factor),
+                          fill=(255, 255, 0), width=1)
+
+    @staticmethod
+    def draw_ellipse(draw_obj, center, size, factor=1):
+        if type(size) == list:
+            x_size = size[0]
+            y_size = size[1]
+        else:
+            x_size = size
+            y_size = size
+        left_up_x = center[0] - x_size
+        left_up_y = center[1] - y_size
+        right_down_x = center[0] + x_size
+        right_down_y = center[1] + y_size
+        draw_obj.ellipse((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
+                         fill=(255, 255, 0), width=1)
+
+    @staticmethod
+    def draw_arc(draw_obj, start, angles, radius, factor=1):
+        left_up_x = start[0] - radius
+        left_up_y = start[1] - radius
+        right_down_x = start[0] + radius
+        right_down_y = start[1] + radius
+        draw_obj.arc((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
+                     start=angles[0], end=angles[1], fill=(255, 255, 255), width=1)
+
     def run(self, pcb_data):
         factor = 4
         image_obj = Image.new("RGB", (512 * factor, 512 * factor), (0, 0, 0))
         draw_obj = ImageDraw.Draw(image_obj)
 
-        # Draw PCB general data:
-        for line in pcb_data["borders"]:
-            draw_obj.line((line["start"][0] * factor, line["start"][1] * factor,
-                           line["end"][0] * factor, line["end"][1] * factor), fill=(255, 255, 0), width=1)
+        # Iterate over all dataframe rows:
+        for index, pcb_element in pcb_data.iterrows():
+            # Draw PCB general data:
+            if pcb_element.type == "border":
+                self.draw_lines(draw_obj, pcb_element.shape_lines, factor)
 
-        # Draw modules:
-        for module in pcb_data["modules"].values():
-            start_point = module["position"]
-            for point in module["placement_outlines"]["line"]:
-                initial_x = point["start"][0] + start_point[0]
-                final_x = point["end"][0] + start_point[0]
-                initial_y = point["start"][1] + start_point[1]
-                final_y = point["end"][1] + start_point[1]
-                draw_obj.line((initial_x * factor, initial_y * factor, final_x * factor, final_y * factor),
-                              fill=(255, 255, 255), width=1)
-            for point in module["placement_outlines"]["circle"]:
-                radius = math.sqrt((point["end"][0] - point["center"][0])**2 + (point["end"][1] - point["center"][1])**2)
-                left_up_x = start_point[0] + point["center"][0] - radius
-                left_up_y = start_point[1] + point["center"][1] - radius
-                right_down_x = start_point[0] + point["center"][0] + radius
-                right_down_y = start_point[1] + point["center"][1] + radius
-                draw_obj.ellipse((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
-                                 fill=(255, 255, 255), width=1)
-            for point in module["placement_outlines"]["arc"]:
-                radius = math.sqrt((point["end"][0] - point["start"][0])**2 + (point["end"][1] - point["start"][1])**2)
-                start_angle = math.atan2(point["start"][1], point["start"][0]) * 180 / math.pi
-                end_angle = math.atan2(point["end"][1], point["end"][0]) * 180 / math.pi
+            # Draw via:
+            if pcb_element.type == "via":
+                self.draw_ellipse(draw_obj, pcb_element.position, pcb_element.diameters, factor)
 
-                left_up_x = start_point[0] + point["start"][0] - radius
-                left_up_y = start_point[1] + point["start"][1] - radius
-                right_down_x = start_point[0] + point["start"][0] + radius
-                right_down_y = start_point[1] + point["start"][1] + radius
+            # Draw pad:
+            # TODO: PADS MISSING LIKE R18-1
+            if pcb_element.type == "pad":
+                if pcb_element.diameters is None:
+                    # Rectangular pad:
+                    self.draw_lines(draw_obj, pcb_element.shape_lines, factor)
+                else:
+                    # Circular pad:
+                    self.draw_ellipse(draw_obj, pcb_element.position, pcb_element.diameters, factor)
 
-                draw_obj.arc((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
-                             start=start_angle, end=end_angle, fill=(255, 255, 255), width=1)
-            for pad_number, par_params in module["pads"].items():
-                left_up_x = start_point[0] + par_params["position"][0] - par_params["size"][0]
-                left_up_y = start_point[1] + par_params["position"][1] - par_params["size"][0]
-                right_down_x = start_point[0] + par_params["position"][0] + par_params["size"][0]
-                right_down_y = start_point[1] + par_params["position"][1] + par_params["size"][0]
-                draw_obj.ellipse((left_up_x * factor, left_up_y * factor, right_down_x * factor, right_down_y * factor),
-                                 fill=(255, 255, 0), width=0)
+            # Draw module placement outlines:
+            if pcb_element.type == "module":
+                if pcb_element.shape_lines is not None:
+                    self.draw_lines(draw_obj, pcb_element.shape_lines, factor)
+                if pcb_element.shape_circles is not None:
+                    for circle in pcb_element.shape_circles:
+                        self.draw_ellipse(draw_obj, circle["center"], circle["radius"], factor)
+                if pcb_element.shape_arcs is not None:
+                    for arc in pcb_element.shape_arcs:
+                        self.draw_arc(draw_obj, arc["start"], arc["angles"], arc["radius"], factor)
 
         image_obj.show()
         image_obj.save(ROOT_PATH + "//inputs//pcb_data.png")
@@ -617,14 +653,11 @@ if __name__ == "__main__":
     # METHOD 2:
     pcb_obj = PCBMappingKiCAD()
     pcb_info = pcb_obj.pcb_reader()
-    pcb_info_processed = pcb_obj.pcb_data_processor(pcb_info)
-    pcb_df = pcb_obj.dataframe_constructor(pcb_info_processed)
+    pcb_df = pcb_obj.dataframe_constructor(pcb_info)
 
-    # print(json.dumps(pcb_info, sort_keys=True, indent=4))
-    print(pcb_df)
     with open(ROOT_PATH + "//inputs//pcb_data.json", 'w') as json_obj:
-        json.dump(pcb_info_processed, json_obj, indent=4)
+        json.dump(pcb_info, json_obj, indent=4)
     DataframeOperations.save_csv(ROOT_PATH + "//inputs//pcb_data.csv", pcb_df)
 
-    # pcb_draw_obj = PCBDrawing()
-    # pcb_draw_obj.run(pcb_info)
+    pcb_draw_obj = PCBDrawing()
+    pcb_draw_obj.run(pcb_df)
