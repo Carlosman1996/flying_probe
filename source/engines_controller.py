@@ -18,12 +18,12 @@ class SerialPortController:
     INITIALIZATION_DELAY_TIME = 2
     RESPONSE_DELAY_TIME = 0
 
-    def __init__(self):
+    def __init__(self, logger_level="INFO"):
         self.device_active = False
         self.session = None
 
         # Set logger:
-        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level="DEBUG")
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
     def exception_handler(self, exception):
         message = f"SERIAL ERROR - An error has occurred!\nError information: {str(exception)}"

@@ -21,10 +21,16 @@ class TestPointsSelector:
     def get_shape_extreme_apexes(shape_coordinates):
         all_x_coordinates = [point_coords[0] for point_coords in shape_coordinates]
         all_y_coordinates = [point_coords[1] for point_coords in shape_coordinates]
-        apexes = [[max(all_x_coordinates), max(all_y_coordinates)],
-                  [max(all_x_coordinates), min(all_y_coordinates)],
-                  [min(all_x_coordinates), max(all_y_coordinates)],
-                  [min(all_x_coordinates), min(all_y_coordinates)]]
+        if len(all_x_coordinates) > 0 and len(all_y_coordinates) > 0:
+            apexes = [[max(all_x_coordinates), max(all_y_coordinates)],
+                      [max(all_x_coordinates), min(all_y_coordinates)],
+                      [min(all_x_coordinates), max(all_y_coordinates)],
+                      [min(all_x_coordinates), min(all_y_coordinates)]]
+        else:
+            apexes = [[float('inf'), float('inf')],
+                      [float('inf'), float('-inf')],
+                      [float('-inf'), float('inf')],
+                      [float('-inf'), float('-inf')]]
         return apexes
 
     @staticmethod
@@ -86,9 +92,11 @@ class TestPointsSelector:
             probe_shape = self.get_probe_projection(test_point["position"], None, None, None, None)
 
             # Define shapely polygon for probe shape:
-            probe_polygon = Polygon(probe_shape)
+            probe_polygon = Polygon(probe_shape).convex_hull
+            # "convex_hull" - Returns a representation of the smallest convex Polygon containing all the points in the
+            # object unless the number of points in the object is less than three.
             # Define shapely polygon for component shape:
-            component_polygon = Polygon(component["shape_coordinates"])
+            component_polygon = Polygon(component["shape_lines"]).convex_hull   # TODO: add arcs and circles to polygon shape
 
             # Check intersection between polygons:
             intersection = probe_polygon.intersects(component_polygon)
@@ -98,21 +106,21 @@ class TestPointsSelector:
 
     def run(self, probes_conf, user_nets, pcb_info_df):
         # Separate vias and placement outlines in different dataframes:
-        test_points_df = pcb_info_df[pcb_info_df["type"] == "via"].copy()
-        components_df = pcb_info_df[pcb_info_df["type"] == "placement_outline"].copy()
+        test_points_df = pcb_info_df[pcb_info_df["type"].isin(["via", "pad"])].copy()
+        components_df = pcb_info_df[pcb_info_df["type"] == "module"].copy()
 
         # Check the number of pads available per user net:
         test_points_df = test_points_df[test_points_df["net_name"].isin(user_nets)]
 
         # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
-        if not test_points_df.empty:
+        if not test_points_df.empty and not components_df.empty:
             # Add all probes to test points: duplicate each test point depending on the probe
             test_points_df = self.add_probes_to_test_points_dataframe(probes_conf, test_points_df)
 
             # Calculate extreme apexes of each component:
             components_df["extreme_apexes"] = \
                 components_df.apply(lambda component:
-                                    self.get_shape_extreme_apexes(component["shape_coordinates"]), axis=1)
+                                    self.get_shape_extreme_apexes(component["shape_lines"]), axis=1)   # TODO: add arcs and circles to polygon shape
 
             # Check if probe can be used:
             test_points_df["probe_usable"] = \

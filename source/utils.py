@@ -55,6 +55,13 @@ class FileOperations:
         return file_content
 
     @staticmethod
+    def read_file_lines(file_path):
+        FileOperations.check_file_exists(file_path)
+        with open(file_path, 'r') as file_obj:
+            file_content = file_obj.readlines()
+        return file_content
+
+    @staticmethod
     def write_file(file_path, string):
         with open(file_path, 'w') as file_obj:
             file_obj.write(string)

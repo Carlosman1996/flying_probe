@@ -16,13 +16,13 @@ __email__ = "cmmolinas01@gmail.com"
 class VISAController:
     RESPONSE_DELAY_TIME = 0.25
 
-    def __init__(self):
+    def __init__(self, logger_level="INFO"):
         self.device_active = False
         self.resource_manager = None
         self.session = None
 
         # Set logger:
-        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level="DEBUG")
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
     def exception_handler(self, exception):
         message = "VISA ERROR - An error has occurred!\nError information:\n"\

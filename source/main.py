@@ -19,17 +19,17 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class FlyingProbe:
-    def __init__(self, inputs_path=None, outputs_path=None):
+    def __init__(self, inputs_path=None, outputs_path=None, logger_level="INFO"):
         # Main attributes:
         self.inputs_path = inputs_path
         self.outputs_path = outputs_path
 
         # Initialize modules:
-        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level="DEBUG")
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
         self.inputs_controller = files_controller.InputsController(inputs_path=self.inputs_path)
         self.pretest_controller = files_controller.PreTestController(pretest_path=self.inputs_path)
         self.outputs_controller = files_controller.OutputsController(outputs_path=self.outputs_path)
-        self.pcb_mapping = pcb_mapping.PCBMapping(pcb_path=self.inputs_controller.pcb_path)
+        self.pcb_mapping = pcb_mapping.PCBMappingKiCAD(pcb_path=self.inputs_controller.pcb_path)
         self.checkpoints_selector = checkpoints_selector.TestPointsSelector()
         self.flying_maps = flying_maps.FlyingMaps()
         self.engines_controller = engines_controller.EnginesController()
@@ -155,5 +155,6 @@ class FlyingProbe:
 
 if __name__ == "__main__":
     flying_probe_obj = FlyingProbe(inputs_path=ROOT_PATH + "//inputs//",
-                                   outputs_path=ROOT_PATH + "//inputs//")
+                                   outputs_path=ROOT_PATH + "//inputs//",
+                                   logger_level="INFO")
     flying_probe_obj.run()
