@@ -192,17 +192,12 @@ class PCBMappingKiCAD:
         reference_point[0] -= self.position_offset[0]
         reference_point[1] -= self.position_offset[1]
 
-        print(pcb_data_dict["borders"])
-
         # Adjust borders to new reference:
         for border in pcb_data_dict["borders"]:
             border["start"][0] -= reference_point[0]
             border["start"][1] -= reference_point[1]
             border["end"][0] -= reference_point[0]
             border["end"][1] -= reference_point[1]
-
-        print(reference_point)
-        print(pcb_data_dict["borders"])
 
         # Read and split kicad_pcb info in general and modules data:
         append_modules_data = False

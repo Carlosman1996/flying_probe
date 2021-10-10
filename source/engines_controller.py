@@ -115,6 +115,8 @@ class XYAxisEngines:
     @SerialPortController.check_command_response
     def homing(self, probe):
         response = self.serial_port_ctrl.send_command(f"G28")
+        # TODO: wait until homing has been finished
+        time.sleep(20)  # Hardcoded
         return response
 
 
