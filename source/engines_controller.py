@@ -106,8 +106,7 @@ class XYAxisEngines:
 
     @SerialPortController.check_command_response
     def homing(self, probe):
-        # response = self.serial_port_ctrl.send_command(f"G{probe}28 X0 Y0 Z0")
-        response = "ok"
+        response = self.serial_port_ctrl.send_command(f"G28")
         return response
 
 

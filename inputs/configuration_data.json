@@ -1,7 +1,7 @@
 {
     "engines": {
-        "serial_port": "COM1",
-        "baud_rate": 115200,
+        "serial_port": "COM7",
+        "baud_rate": 250000,
         "active": false
     },
     "oscilloscope": {

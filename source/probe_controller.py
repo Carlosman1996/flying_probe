@@ -24,6 +24,7 @@ class ProbeController:
     def initialize(self, probe_name, configuration):
         self.probe_name = int(probe_name)
         self.configuration = configuration  # General configuration of the probe: speed, acceleration, ...
+        # TODO: add probe XY position offset - PCB is placed at FP center
 
     def measure_test_point(self, trajectory, measurement_inputs, test_point_name=""):
         """ measure_test_point(self, list, dict)
