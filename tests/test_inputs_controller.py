@@ -97,17 +97,20 @@ def test_inputs_data_correct(inputs_controller_object):
 
 def test_configuration_data_types_incorrect(inputs_controller_object):
     data = {
-        "probe_1":
+        "probes":
         {
-            "inclination": 0,
-            "speed": "10000",
-            "diameter": 0.001
-        },
-        "probe_2":
-        {
-            "inclination": 12,
-            "speed": "No speed",
-            "diameter": 0.001
+            "1":
+            {
+                "inclination": 0,
+                "speed": "10000",
+                "diameter": 0.001
+            },
+            "2":
+            {
+                "inclination": 12,
+                "speed": "No speed",
+                "diameter": 0.001
+            }
         }
     }
     try:
@@ -119,17 +122,20 @@ def test_configuration_data_types_incorrect(inputs_controller_object):
 
 def test_configuration_data_correct(inputs_controller_object):
     data = {
-        "probe_1":
+        "probes":
         {
-            "inclination": 0,
-            "speed": 10000,
-            "diameter": 0.001
-        },
-        "probe_2":
-        {
-            "inclination": 12,
-            "speed": 10000,
-            "diameter": 0.001
+            "1":
+            {
+                "inclination": 0,
+                "speed": 10000,
+                "diameter": 0.001
+            },
+            "2":
+            {
+                "inclination": 12,
+                "speed": 10000,
+                "diameter": 0.001
+            }
         }
     }
     try:

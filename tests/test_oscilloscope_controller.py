@@ -12,7 +12,6 @@ def test_oscilloscope_inactive(oscilloscope_inactive):
                  "frequency": 1000,
                  "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}
 
-    oscilloscope_inactive.initialize()
     result = oscilloscope_inactive.measure(meas_dict)
     oscilloscope_inactive.stop()
 
@@ -24,8 +23,6 @@ def test_oscilloscope_inactive(oscilloscope_inactive):
 
 
 def test_oscilloscope_inactive_multiple_channels(oscilloscope_inactive):
-    oscilloscope_inactive.initialize()
-
     results = []
     meas_dict = {"channel": 2,
                  "trigger_edge_slope": "FALL",
@@ -36,6 +33,7 @@ def test_oscilloscope_inactive_multiple_channels(oscilloscope_inactive):
                  "frequency": 1000,
                  "measurements": ["FREQUENCY", "CYCRMS", "MAX", "MIN"]}
     results.append(oscilloscope_inactive.measure(meas_dict))
+
     meas_dict = {"channel": 1,
                  "trigger_edge_slope": "RISE",
                  "coupling": "DC",

@@ -2,6 +2,8 @@ import time
 import random
 from datetime import datetime
 import serial
+from source import logger
+from source.utils import FileOperations
 
 
 random.seed(str(datetime.now()))
@@ -16,31 +18,32 @@ class SerialPortController:
     INITIALIZATION_DELAY_TIME = 2
     RESPONSE_DELAY_TIME = 0
 
-    def __init__(self, serial_port, baud_rate, device_active):
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
-        self.device_active = device_active
-        self.session = self.create_connection()
+    def __init__(self, logger_level="INFO"):
+        self.device_active = False
+        self.session = None
 
-    @staticmethod
-    def exception_handler(exception):
-        raise Exception("SERIAL ERROR - An error has occurred!\n"
-                        f"Error information: {str(exception)}")
+        # Set logger:
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
-    def create_connection(self):
-        # If the device is in test mode, the session parameter will be None:
-        session = None
+    def exception_handler(self, exception):
+        message = f"SERIAL ERROR - An error has occurred!\nError information: {str(exception)}"
+        self.logger.set_message(level="CRITICAL", message_level="MESSAGE", message=message)
+        raise Exception(message)
+
+    def create_connection(self, serial_port, baud_rate, devices_active=False):
+        # Set devices state parameter:
+        self.device_active = devices_active
 
         # If the device is set to active, initialize session:
         if self.device_active:
             # Create serial port connection (session).
             try:
-                session = serial.Serial(port="COM6", baudrate=115200)
+                self.session = serial.Serial(port=serial_port, baudrate=baud_rate)
             except Exception as exception:
                 self.exception_handler(exception)
 
         time.sleep(self.INITIALIZATION_DELAY_TIME)
-        return session
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message="Connection established")
 
     def read_response(self):
         response = ""
@@ -52,6 +55,7 @@ class SerialPortController:
 
     def send_command(self, command):
         response = None
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Send command: {command}")
 
         # If the device is set to active, write and read command:
         if self.device_active:
@@ -65,13 +69,16 @@ class SerialPortController:
                 self.exception_handler(exception)
         # If the device is in test mode, generate a float random number:
         else:
-            response = "OK\nOK\n\n"
+            response = "ok"
+
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Response: {response}")
         return response
 
     def close_connection(self):
         # If the device is set to active, close VISA interface:
         if self.device_active:
             self.session.close()
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message="Connection closed")
 
     @staticmethod
     def check_command_response(func):
@@ -79,37 +86,37 @@ class SerialPortController:
         def check_command_response_wrapper(*args, **kwargs):
             response = func(*args, **kwargs)
 
-            if response != "OK\nOK\n\n":
+            # TODO: review response
+            if "ok" not in response:
                 raise Exception("ENGINES CONTROLLER ERROR\n"
                                 "Error information: Response must contain two 'OK' in different lines. The string read"
                                 f"is: {response}")
         return check_command_response_wrapper
 
 
-class XAxisEngine:
+class XYAxisEngines:
     def __init__(self, serial_port_ctrl):
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
 
     @SerialPortController.check_command_response
-    def move(self, probe, movement, speed):
-        response = self.serial_port_ctrl.send_command(f"G{probe}91Y{movement}F{speed}")
+    def move(self, probe, x_move=0, y_move=0, speed=0):
+        # response = self.serial_port_ctrl.send_command(f"G{probe}0 Y{movement} F{speed}")
+        self.serial_port_ctrl.send_command(f"G91")
+        if x_move == 0:
+            response = self.serial_port_ctrl.send_command(f"G0 Y{y_move} F{speed}")
+        elif y_move == 0:
+            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} F{speed}")
+        else:
+            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
+        self.serial_port_ctrl.send_command(f"G90")
         return response
 
     @SerialPortController.check_command_response
     def homing(self, probe):
-        response = self.serial_port_ctrl.send_command(f"G{probe}28 X0 Y0 Z0")
-        return response
-
-
-class YAxisEngine:
-    def __init__(self, serial_port_ctrl):
-        # General attributes:
-        self.serial_port_ctrl = serial_port_ctrl
-
-    @SerialPortController.check_command_response
-    def move(self, probe, movement, speed):
-        response = self.serial_port_ctrl.send_command(f"{probe}")
+        response = self.serial_port_ctrl.send_command(f"G28")
+        # TODO: wait until homing has been finished
+        time.sleep(20)  # Hardcoded
         return response
 
 
@@ -125,12 +132,14 @@ class ZAxisEngine:
 
     @SerialPortController.check_command_response
     def low_level(self, probe):
-        response = self.serial_port_ctrl.send_command(f"M{probe}4")
+        # response = self.serial_port_ctrl.send_command(f"M{probe}4")
+        response = self.serial_port_ctrl.send_command("M4")
         return response
 
     @SerialPortController.check_command_response
     def high_level(self, probe):
-        response = self.serial_port_ctrl.send_command(f"M{probe}5")
+        # response = self.serial_port_ctrl.send_command(f"M{probe}5")
+        response = self.serial_port_ctrl.send_command("M5")
         return response
 
     def calibration(self, probe):
@@ -150,41 +159,40 @@ class ZAxisEngine:
 
 
 class EnginesController:
-    def __init__(self, serial_port, baud_rate=115200, devices_active=True):
+    def __init__(self):
         # General attributes:
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
-        self.devices_active = devices_active
-        self.x_axis_ctrl = None
-        self.y_axis_ctrl = None
+        self.xy_axis_ctrl = None
         self.z_axis_ctrl = None
 
         # Initialize serial port controller:
-        self.serial_port_ctrl = SerialPortController(self.serial_port, self.baud_rate, devices_active)
+        self.serial_port_ctrl = SerialPortController()
 
-    def initialize(self):
+    def initialize(self, configuration):
+        # Create connection:
+        self.serial_port_ctrl.create_connection(serial_port=configuration["serial_port"],
+                                                baud_rate=configuration["baud_rate"],
+                                                devices_active=configuration["active"])
+
         # Initialize X axis engine controller:
-        self.x_axis_ctrl = XAxisEngine(self.serial_port_ctrl)
-
-        # Initialize Y axis engine controller:
-        self.y_axis_ctrl = YAxisEngine(self.serial_port_ctrl)
+        self.xy_axis_ctrl = XYAxisEngines(self.serial_port_ctrl)
 
         # Initialize Z axis engine controller:
         self.z_axis_ctrl = ZAxisEngine(self.serial_port_ctrl)
 
-    def close(self):
+    def stop(self):
         # Close serial port controller:
         self.serial_port_ctrl.close_connection()
 
 
 if __name__ == '__main__':
-    engines_ctrl = EnginesController(serial_port="COM6", baud_rate=115200, devices_active=False)
-    engines_ctrl.initialize()
+    conf = {
+        "serial_port": "COM1",
+        "baud_rate": 115200,
+        "active": False
+    }
+    engines_ctrl = EnginesController()
+    engines_ctrl.initialize(configuration=conf)
 
-    engines_ctrl.y_axis_ctrl.move("", -50.0, 10000)
-    engines_ctrl.y_axis_ctrl.move("", 50.0, 10000)
-    engines_ctrl.y_axis_ctrl.move("", -100.0, 10000)
-    engines_ctrl.y_axis_ctrl.move("", 200.0, 10000)
-    engines_ctrl.y_axis_ctrl.move("", -100.0, 10000)
+    engines_ctrl.xy_axis_ctrl.move("", 0, 0, 1)
 
-    engines_ctrl.close()
+    engines_ctrl.stop()

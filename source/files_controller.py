@@ -1,5 +1,6 @@
 from source.utils import ROOT_PATH
 from source.utils import JSONFileOperations
+from source.utils import DataframeOperations
 
 
 __author__ = "Carlos Manuel Molina Sotoca"
@@ -7,10 +8,14 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class InputsController:
-    def __init__(self):
-        self.inputs_data_path = ROOT_PATH + "//inputs//inputs_data.json"
-        self.conf_data_path = ROOT_PATH + "//inputs//configuration_data.json"
-        self.pcb_path = ROOT_PATH + "//inputs//*.kicad_pcb"
+    def __init__(self, inputs_path=None):
+        if inputs_path is None:
+            inputs_path = ROOT_PATH + "//inputs//"
+
+        # Set files paths:
+        self.inputs_data_path = inputs_path + "inputs_data.json"
+        self.conf_data_path = inputs_path + "configuration_data.json"
+        self.pcb_path = inputs_path + "pcb_file.kicad_pcb"
 
     def read_inputs_data(self, data=None):
         if data is None:
@@ -57,7 +62,7 @@ class InputsController:
             "additionalProperties": {"type": "number"}
         }
 
-        if JSONFileOperations.validate_data_schema_dict_of_dicts(data, data_schema):
+        if JSONFileOperations.validate_data_schema_dict_of_dicts(data["probes"], data_schema):
             return data
         else:
             raise Exception("Inputs data structure is not correct.")
@@ -66,6 +71,45 @@ class InputsController:
         inputs_data = self.read_inputs_data()
         conf_data = self.read_conf_data()
         return inputs_data, conf_data
+
+
+class PreTestController:
+    def __init__(self, pretest_path=None):
+        self.pretest_path = pretest_path
+        self.inputs_data_file_name = "inputs_data.json"
+        self.conf_data_file_name = "configuration_data.json"
+        self.test_points_data_file_name = "test_points_processed.csv"   # Hardcoded
+
+    def save_data(self, inputs_data, configuration_data, test_points_data):
+        # Write inputs data file:
+        JSONFileOperations.write_file(self.pretest_path + self.inputs_data_file_name, inputs_data)
+
+        # Write configuration data file:
+        JSONFileOperations.write_file(self.pretest_path + self.conf_data_file_name, configuration_data)
+
+        # Write test points data file:
+        DataframeOperations.save_csv(self.pretest_path + self.test_points_data_file_name, test_points_data)
+
+    def read_data(self):
+        # Read inputs data file:
+        inputs_data = JSONFileOperations.read_file(self.pretest_path + self.inputs_data_file_name)
+
+        # Read configuration data file:
+        conf_data = JSONFileOperations.read_file(self.pretest_path + self.conf_data_file_name)
+
+        # Read test points data file:
+        test_points_data = DataframeOperations.read_csv(self.pretest_path + self.test_points_data_file_name)
+        return inputs_data, conf_data, test_points_data
+
+
+class OutputsController:
+    def __init__(self, outputs_path=None):
+        self.outputs_path = outputs_path
+        self.test_points_data_file_name = "test_points_measurements.csv"   # Hardcoded
+
+    def save_data(self, test_points_data):
+        # Write test points data file:
+        DataframeOperations.save_csv(self.outputs_path + self.test_points_data_file_name, test_points_data)
 
 
 if __name__ == "__main__":

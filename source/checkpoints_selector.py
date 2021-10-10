@@ -12,9 +12,8 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class TestPointsSelector:
-    def __init__(self, probes_configuration):
+    def __init__(self):
         # Hardcoded values
-        self.probes = probes_configuration
         self.probes_surface_increment = 0.01    # Hardcoded parameter
         self.min_distance_multiplier = 5    # Hardcoded parameter
 
@@ -22,10 +21,16 @@ class TestPointsSelector:
     def get_shape_extreme_apexes(shape_coordinates):
         all_x_coordinates = [point_coords[0] for point_coords in shape_coordinates]
         all_y_coordinates = [point_coords[1] for point_coords in shape_coordinates]
-        apexes = [[max(all_x_coordinates), max(all_y_coordinates)],
-                  [max(all_x_coordinates), min(all_y_coordinates)],
-                  [min(all_x_coordinates), max(all_y_coordinates)],
-                  [min(all_x_coordinates), min(all_y_coordinates)]]
+        if len(all_x_coordinates) > 0 and len(all_y_coordinates) > 0:
+            apexes = [[max(all_x_coordinates), max(all_y_coordinates)],
+                      [max(all_x_coordinates), min(all_y_coordinates)],
+                      [min(all_x_coordinates), max(all_y_coordinates)],
+                      [min(all_x_coordinates), min(all_y_coordinates)]]
+        else:
+            apexes = [[float('inf'), float('inf')],
+                      [float('inf'), float('-inf')],
+                      [float('-inf'), float('inf')],
+                      [float('-inf'), float('-inf')]]
         return apexes
 
     @staticmethod
@@ -61,10 +66,10 @@ class TestPointsSelector:
                   test_point_position[1] - self.probes_surface_increment]]
         return shape
 
-    def add_probes_to_test_points_dataframe(self, test_points_df):
+    def add_probes_to_test_points_dataframe(self, probes_conf, test_points_df):
         tps_per_probe_frames = []
 
-        for probe_key, probe_parameters in self.probes.items():
+        for probe_key, probe_parameters in probes_conf.items():
             test_points_df["probe"] = probe_key
             tps_per_probe_frames.append(test_points_df.copy())
         test_points_df = pd.concat(tps_per_probe_frames).reset_index()
@@ -87,9 +92,11 @@ class TestPointsSelector:
             probe_shape = self.get_probe_projection(test_point["position"], None, None, None, None)
 
             # Define shapely polygon for probe shape:
-            probe_polygon = Polygon(probe_shape)
+            probe_polygon = Polygon(probe_shape).convex_hull
+            # "convex_hull" - Returns a representation of the smallest convex Polygon containing all the points in the
+            # object unless the number of points in the object is less than three.
             # Define shapely polygon for component shape:
-            component_polygon = Polygon(component["shape_coordinates"])
+            component_polygon = Polygon(component["shape_lines"]).convex_hull   # TODO: add arcs and circles to polygon shape
 
             # Check intersection between polygons:
             intersection = probe_polygon.intersects(component_polygon)
@@ -97,23 +104,23 @@ class TestPointsSelector:
                 return False
         return True
 
-    def run(self, user_nets, pcb_info_df):
+    def run(self, probes_conf, user_nets, pcb_info_df):
         # Separate vias and placement outlines in different dataframes:
-        test_points_df = pcb_info_df[pcb_info_df["type"] == "via"].copy()
-        components_df = pcb_info_df[pcb_info_df["type"] == "placement_outline"].copy()
+        test_points_df = pcb_info_df[pcb_info_df["type"].isin(["via", "pad"])].copy()
+        components_df = pcb_info_df[pcb_info_df["type"] == "module"].copy()
 
         # Check the number of pads available per user net:
         test_points_df = test_points_df[test_points_df["net_name"].isin(user_nets)]
 
         # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
-        if not test_points_df.empty:
+        if not test_points_df.empty and not components_df.empty:
             # Add all probes to test points: duplicate each test point depending on the probe
-            test_points_df = self.add_probes_to_test_points_dataframe(test_points_df)
+            test_points_df = self.add_probes_to_test_points_dataframe(probes_conf, test_points_df)
 
             # Calculate extreme apexes of each component:
             components_df["extreme_apexes"] = \
                 components_df.apply(lambda component:
-                                    self.get_shape_extreme_apexes(component["shape_coordinates"]), axis=1)
+                                    self.get_shape_extreme_apexes(component["shape_lines"]), axis=1)   # TODO: add arcs and circles to polygon shape
 
             # Check if probe can be used:
             test_points_df["probe_usable"] = \
@@ -140,6 +147,6 @@ if __name__ == "__main__":
                            "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
                                      [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
     user_nets_list = {"DATA-RB7": {}}
-    test_points_obj = TestPointsSelector(configuration)
-    tp_selector_result = test_points_obj.run(list(user_nets_list.keys()), info_df)
+    test_points_obj = TestPointsSelector()
+    tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), info_df)
     print(tp_selector_result)
