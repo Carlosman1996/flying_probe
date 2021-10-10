@@ -11,7 +11,7 @@
     "probes": {
         "1": {
             "inclination": 0,
-            "speed": 1,
+            "speed": 20000,
             "diameter": 0.001
         }
     }

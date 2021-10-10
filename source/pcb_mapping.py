@@ -139,6 +139,7 @@ class PCBMappingKiCAD:
                          "modules": {}}
 
         # TODO: refactor code
+        # TODO: adjust PCB offset
 
         # Read and split kicad_pcb info in general and modules data:
         append_modules_data = False

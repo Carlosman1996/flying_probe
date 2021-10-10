@@ -101,7 +101,8 @@ class FlyingProbe:
         # Initialize probes:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Initialize probes")
         for probe, probe_conf in conf_data["probes"].items():
-            self.probes_controller[probe] = copy.deepcopy(self.probe_controller)
+            # self.probes_controller[probe] = copy.deepcopy(self.probe_controller)
+            self.probes_controller[probe] = self.probe_controller   # TODO: review fail ctypes
             self.probes_controller[probe].initialize(probe_name=probe, configuration=probe_conf)
 
         # Iterate over each test point: move probes and measure:

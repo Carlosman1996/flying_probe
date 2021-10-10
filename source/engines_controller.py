@@ -86,6 +86,7 @@ class SerialPortController:
         def check_command_response_wrapper(*args, **kwargs):
             response = func(*args, **kwargs)
 
+            # TODO: review response
             if "ok" not in response:
                 raise Exception("ENGINES CONTROLLER ERROR\n"
                                 "Error information: Response must contain two 'OK' in different lines. The string read"
@@ -101,7 +102,14 @@ class XYAxisEngines:
     @SerialPortController.check_command_response
     def move(self, probe, x_move=0, y_move=0, speed=0):
         # response = self.serial_port_ctrl.send_command(f"G{probe}0 Y{movement} F{speed}")
-        response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
+        self.serial_port_ctrl.send_command(f"G91")
+        if x_move == 0:
+            response = self.serial_port_ctrl.send_command(f"G0 Y{y_move} F{speed}")
+        elif y_move == 0:
+            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} F{speed}")
+        else:
+            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
+        self.serial_port_ctrl.send_command(f"G90")
         return response
 
     @SerialPortController.check_command_response
