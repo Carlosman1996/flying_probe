@@ -1,13 +1,17 @@
 {
+    "engines": {
+        "serial_port": "COM7",
+        "baud_rate": 250000,
+        "active": false
+    },
+    "oscilloscope": {
+        "port": 5188,
+        "active": false
+    },
     "probes": {
         "1": {
             "inclination": 0,
-            "speed": 10000,
-            "diameter": 0.001
-        },
-        "2": {
-            "inclination": 12,
-            "speed": 10000,
+            "speed": 20000,
             "diameter": 0.001
         }
     }

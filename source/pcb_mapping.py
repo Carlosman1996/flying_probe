@@ -91,6 +91,9 @@ class PCBMappingKiCAD:
             raise Exception("KiCAD PCB file path cannot be found.")
         self.pcb_path = pcb_path
 
+        # PCB position on flying probe:
+        self.position_offset = [100, 20]
+
         # Layers:
         self.borders_layers = ["Edge.Cuts"]
         self.placement_outlines_layers = ["*.SilkS", "F.SilkS", "B.SilkS"]
@@ -103,16 +106,17 @@ class PCBMappingKiCAD:
                            "shape_lines", "shape_circles", "shape_arcs", "height"]
 
     @staticmethod
-    def refer_point_to_origin(reference_point, particular_point, angle_degrees):
+    def refer_point_to_origin(reference_point, component_ref_point, component_point, angle_degrees):
         angle_radians = angle_degrees * math.pi / 180
         point_rotate = [0, 0]
 
         # Rotation counterclockwise:
-        point_rotate[0] = math.cos(angle_radians) * particular_point[0] + math.sin(angle_radians) * particular_point[1]
-        point_rotate[1] = -math.sin(angle_radians) * particular_point[0] + math.cos(angle_radians) * particular_point[1]
+        point_rotate[0] = math.cos(angle_radians) * component_point[0] + math.sin(angle_radians) * component_point[1]
+        point_rotate[1] = -math.sin(angle_radians) * component_point[0] + math.cos(angle_radians) * component_point[1]
 
         # Absolute point:
-        absolute_point = [reference_point[0] + point_rotate[0], reference_point[1] + point_rotate[1]]
+        absolute_point = [component_ref_point[0] + point_rotate[0] - reference_point[0],
+                          component_ref_point[1] + point_rotate[1] - reference_point[1]]
         return absolute_point
 
     def pcb_reader(self):
@@ -131,6 +135,13 @@ class PCBMappingKiCAD:
                                                    line_string=line_string)
             return layer
 
+        def get_minimum_point_for_reference(point_study, minimum_reference, position_offset):
+            if point_study < minimum_reference and point_study >= position_offset:
+                minimum_reference = point_study
+            elif point_study < position_offset:
+                minimum_reference = position_offset
+            return minimum_reference
+
         pcb_data = FileOperations.read_file_lines(self.pcb_path)
         pcb_data_dict = {"borders": [],
                          "nets": {},
@@ -141,13 +152,8 @@ class PCBMappingKiCAD:
         # TODO: refactor code
         # TODO: adjust PCB offset
 
-        # Read and split kicad_pcb info in general and modules data:
-        append_modules_data = False
-        append_netclasses_data = False
-        netclass_name = None
-        modules_data = []
+        # Read PCB borders top set a reference point:
         for line_info in pcb_data:
-            # Save PCB borders:
             if line_info[0:11] == "  (gr_line ":
                 layer_name = check_element_layer(line_string=line_info)
                 if layer_name in self.borders_layers:
@@ -166,12 +172,44 @@ class PCBMappingKiCAD:
 
                         # Rotate points before save them:
                         values_dict = {"layer": layer_name,
-                                       "start": self.refer_point_to_origin([0, 0], start_point, angle),
-                                       "end": self.refer_point_to_origin([0, 0], end_point, angle)}
+                                       "start": self.refer_point_to_origin([0, 0], [0, 0], start_point, angle),
+                                       "end": self.refer_point_to_origin([0, 0], [0, 0], end_point, angle)}
                         pcb_data_dict["borders"].append(values_dict)
                     else:
                         pcb_data_dict["borders"].append(None)
 
+        # Set coordinates reference:
+        reference_point = [float('inf'), float('inf')]
+        for border in pcb_data_dict["borders"]:
+            if border["start"][0] < reference_point[0]:
+                reference_point[0] = border["start"][0]
+            if border["start"][1] < reference_point[1]:
+                reference_point[1] = border["start"][1]
+            if border["end"][0] < reference_point[0]:
+                reference_point[0] = border["end"][0]
+            if border["end"][1] < reference_point[1]:
+                reference_point[1] = border["end"][1]
+        reference_point[0] -= self.position_offset[0]
+        reference_point[1] -= self.position_offset[1]
+
+        print(pcb_data_dict["borders"])
+
+        # Adjust borders to new reference:
+        for border in pcb_data_dict["borders"]:
+            border["start"][0] -= reference_point[0]
+            border["start"][1] -= reference_point[1]
+            border["end"][0] -= reference_point[0]
+            border["end"][1] -= reference_point[1]
+
+        print(reference_point)
+        print(pcb_data_dict["borders"])
+
+        # Read and split kicad_pcb info in general and modules data:
+        append_modules_data = False
+        append_netclasses_data = False
+        netclass_name = None
+        modules_data = []
+        for line_info in pcb_data:
             # Save PCB nets:
             if line_info[0:7] == "  (net ":
                 net_number = search_text_between_string(first_string='\\(net ', second_string=' ',
@@ -241,7 +279,7 @@ class PCBMappingKiCAD:
                         angle = 0
 
                         # Rotate points before save them:
-                        values_dict = {"position": self.refer_point_to_origin([0, 0], point, angle),
+                        values_dict = {"position": self.refer_point_to_origin(reference_point, [0, 0], point, angle),
                                        "layer": layer_name,
                                        "diameters": float(search_text_between_string(first_string="\\(size ",
                                                                                      second_string="\\)",
@@ -313,10 +351,10 @@ class PCBMappingKiCAD:
                         if values_end is not None and values_center is not None:
                             relative_center_point = [float(number) for number in values_center.split(" ")]
                             relative_end_point = [float(number) for number in values_end.split(" ")]
-                            center_point = self.refer_point_to_origin(module_info["position"], relative_center_point,
-                                                                      module_info["rotation"])
-                            end_point = self.refer_point_to_origin(module_info["position"], relative_end_point,
-                                                                   module_info["rotation"])
+                            center_point = self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                      relative_center_point, module_info["rotation"])
+                            end_point = self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                   relative_end_point, module_info["rotation"])
 
                             radius = math.sqrt((end_point[0] - center_point[0]) ** 2 + (end_point[1] - center_point[1]) ** 2)
 
@@ -340,10 +378,10 @@ class PCBMappingKiCAD:
                             relative_start_point = [float(number) for number in values_start.split(" ")]
                             relative_end_point = [float(number) for number in values_end.split(" ")]
 
-                            start_point = self.refer_point_to_origin(module_info["position"], relative_start_point,
-                                                                     module_info["rotation"])
-                            end_point = self.refer_point_to_origin(module_info["position"], relative_end_point,
-                                                                   module_info["rotation"])
+                            start_point = self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                     relative_start_point, module_info["rotation"])
+                            end_point = self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                   relative_end_point, module_info["rotation"])
 
                             radius = math.sqrt((end_point[0] - start_point[0]) ** 2 + (end_point[1] - start_point[1]) ** 2)
                             start_angle = math.atan2(start_point[1], start_point[0]) * 180 / math.pi
@@ -371,10 +409,10 @@ class PCBMappingKiCAD:
 
                             # Rotate points before save them:
                             values_dict = {"layer": layer_name,
-                                           "start": self.refer_point_to_origin(module_info["position"], start_point,
-                                                                               module_info["rotation"]),
-                                           "end": self.refer_point_to_origin(module_info["position"], end_point,
-                                                                             module_info["rotation"])}
+                                           "start": self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                               start_point, module_info["rotation"]),
+                                           "end": self.refer_point_to_origin(reference_point, module_info["position"],
+                                                                             end_point, module_info["rotation"])}
                             module_info["placement_outlines"]["lines"].append(values_dict)
                         else:
                             module_info["placement_outlines"]["lines"].append(None)
@@ -405,7 +443,7 @@ class PCBMappingKiCAD:
                             position = pad_position
                             rotation = 0
                         module_info["pads"][pad_number]["position"] = \
-                            self.refer_point_to_origin(module_info["position"], position, rotation)
+                            self.refer_point_to_origin(reference_point, module_info["position"], position, rotation)
                         module_info["pads"][pad_number]["rotation"] = rotation
 
                         pad_size = search_text_between_string(first_string="\\(size ", second_string="\\)",
