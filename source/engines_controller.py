@@ -2,6 +2,7 @@ import time
 import random
 from datetime import datetime
 import serial
+import re
 from source import logger
 from source.utils import FileOperations
 
@@ -14,9 +15,9 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class SerialPortController:
-    RESPONSE_TIMEOUT = 20
+    RESPONSE_READ_ITERATIONS = 60
     INITIALIZATION_DELAY_TIME = 2
-    RESPONSE_DELAY_TIME = 0
+    RESPONSE_DELAY_TIME = 1
 
     def __init__(self, logger_level="INFO"):
         self.device_active = False
@@ -48,10 +49,34 @@ class SerialPortController:
     def read_response(self):
         response = ""
         elapsed_time = 0
-        while self.session.inWaiting() > 0 and elapsed_time < self.RESPONSE_TIMEOUT:
+        while self.session.inWaiting() > 0 and elapsed_time < self.RESPONSE_READ_ITERATIONS:
             response += self.session.readline().decode("Ascii")
+
+            time.sleep(self.RESPONSE_DELAY_TIME)
             elapsed_time += 1
         return response
+
+    def wait_movement(self, position):
+        position_command = "M114"
+        elapsed_time = 0
+        while elapsed_time < self.RESPONSE_READ_ITERATIONS:
+            if self.device_active:
+                # Get current position:
+                self.session.write(str.encode(position_command + "\r\n"))
+
+                # Read current position:
+                response = self.read_response()
+            else:
+                response = str(position)
+
+            response_filtered = re.findall(r"[-+]?\d*\.\d+|\d+", response)
+            if response_filtered:
+                response_coordinates = [float(number) for number in response_filtered][0:3]
+                if response_coordinates == position:
+                    break
+
+            time.sleep(self.RESPONSE_DELAY_TIME)
+            elapsed_time += 1
 
     def send_command(self, command):
         response = None
@@ -63,6 +88,7 @@ class SerialPortController:
                 # Write command and wait:
                 self.session.write(str.encode(command + "\r\n"))
                 time.sleep(self.RESPONSE_DELAY_TIME)
+
                 # Read microcontroller response:
                 response = self.read_response()
             except Exception as exception:
@@ -87,7 +113,7 @@ class SerialPortController:
             response = func(*args, **kwargs)
 
             # TODO: review response
-            if "ok" not in response:
+            if "ERROR" in response:
                 raise Exception("ENGINES CONTROLLER ERROR\n"
                                 "Error information: Response must contain two 'OK' in different lines. The string read"
                                 f"is: {response}")
@@ -110,13 +136,15 @@ class XYAxisEngines:
         else:
             response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
         self.serial_port_ctrl.send_command(f"G90")
+        # TODO: study GCODES and MARLIN configuration to set a response after move engines
+        self.serial_port_ctrl.wait_movement(position=[x_move, y_move, 0])
         return response
 
     @SerialPortController.check_command_response
     def homing(self, probe):
         response = self.serial_port_ctrl.send_command(f"G28")
-        # TODO: wait until homing has been finished
-        time.sleep(20)  # Hardcoded
+        # TODO: study GCODES and MARLIN configuration to set a response after move engines
+        self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
         return response
 
 
@@ -134,12 +162,18 @@ class ZAxisEngine:
     def low_level(self, probe):
         # response = self.serial_port_ctrl.send_command(f"M{probe}4")
         response = self.serial_port_ctrl.send_command("M4")
+        # TODO: study GCODES and MARLIN configuration to set a response after move engines
+        # TODO: UNKNOWN STATE - PENDING STUDY
+        self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
         return response
 
     @SerialPortController.check_command_response
     def high_level(self, probe):
         # response = self.serial_port_ctrl.send_command(f"M{probe}5")
         response = self.serial_port_ctrl.send_command("M5")
+        # TODO: study GCODES and MARLIN configuration to set a response after move engines
+        # TODO: UNKNOWN STATE - PENDING STUDY
+        self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
         return response
 
     def calibration(self, probe):
@@ -186,13 +220,14 @@ class EnginesController:
 
 if __name__ == '__main__':
     conf = {
-        "serial_port": "COM1",
-        "baud_rate": 115200,
+        "serial_port": "COM7",
+        "baud_rate": 250000,
         "active": False
     }
     engines_ctrl = EnginesController()
     engines_ctrl.initialize(configuration=conf)
 
+    engines_ctrl.xy_axis_ctrl.homing(0)
     engines_ctrl.xy_axis_ctrl.move("", 0, 0, 1)
 
     engines_ctrl.stop()

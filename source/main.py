@@ -36,8 +36,6 @@ class FlyingProbe:
         self.oscilloscope_controller = oscilloscope_controller.OscilloscopeController()
 
         self.probes_controller = {}
-        self.probe_controller = probe_controller.ProbeController(oscilloscope_ctrl=self.oscilloscope_controller,
-                                                                 engines_ctrl=self.engines_controller)
 
     @staticmethod
     def request_input(question=""):
@@ -80,7 +78,6 @@ class FlyingProbe:
         # Run flying maps:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Flying Maps module")
         test_points_data = self.flying_maps.run(test_points_data)
-        # TODO: implement flying maps module methods
 
         # Save configuration and test planning:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Save Pre-Test results")
@@ -101,8 +98,9 @@ class FlyingProbe:
         # Initialize probes:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Initialize probes")
         for probe, probe_conf in conf_data["probes"].items():
-            # self.probes_controller[probe] = copy.deepcopy(self.probe_controller)
-            self.probes_controller[probe] = self.probe_controller   # TODO: review fail ctypes
+            self.probes_controller[probe] = \
+                probe_controller.ProbeController(oscilloscope_ctrl=self.oscilloscope_controller,
+                                                 engines_ctrl=self.engines_controller)
             self.probes_controller[probe].initialize(probe_name=probe, configuration=probe_conf)
 
         # Iterate over each test point: move probes and measure:
