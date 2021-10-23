@@ -31,6 +31,7 @@ class FlyingProbe:
         self.outputs_controller = files_controller.OutputsController(outputs_path=self.outputs_path)
         self.pcb_mapping = pcb_mapping.PCBMappingKiCAD(pcb_path=self.inputs_controller.pcb_path)
         self.checkpoints_selector = checkpoints_selector.TestPointsSelector()
+        self.calibration_points_selector = checkpoints_selector.CalibrationPointsSelector()
         self.flying_maps = flying_maps.FlyingMaps()
         self.engines_controller = engines_controller.EnginesController()
         self.oscilloscope_controller = oscilloscope_controller.OscilloscopeController()
@@ -69,14 +70,27 @@ class FlyingProbe:
         pcb_info_df = self.pcb_mapping.run()
 
         # Run test points selector:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Calibration Points Selector"
+                                                                               "module")
+        calibration_points_data = \
+            self.calibration_points_selector.run(test_points_df=pcb_info_df,
+                                                 calibration_conf=conf_data["engines"]["calibration"])
+
+        # Run test points selector:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Test Points Selector module")
         user_nets = list(inputs_data.keys())
         test_points_data = self.checkpoints_selector.run(probes_conf=conf_data["probes"],
                                                          user_nets=user_nets,
                                                          pcb_info_df=pcb_info_df)
 
-        # Run flying maps:
-        self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Flying Maps module")
+        # Run flying maps for test points data:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Flying Maps module for "
+                                                                               "calibrations data")
+        calibration_points_data = self.flying_maps.run(calibration_points_data)
+
+        # Run flying maps for test points data:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Flying Maps module for test "
+                                                                               "points data")
         test_points_data = self.flying_maps.run(test_points_data)
 
         # Save configuration and test planning:
@@ -84,9 +98,15 @@ class FlyingProbe:
         self.pretest_controller.save_data(inputs_data=inputs_data,
                                           configuration_data=conf_data,
                                           test_points_data=test_points_data)
-        return inputs_data, conf_data, test_points_data
+        return inputs_data, conf_data, test_points_data, calibration_points_data
 
-    def execute_test(self, inputs_data, conf_data, test_points_data):
+    def execute_test(self, inputs_data, conf_data, test_points_data, calibration_points_data):
+        # Check calibration points data:
+        if len(calibration_points_data) == 0:
+            self.logger.set_message(level="INFO", message_level="SECTION", message="No calibration points available")
+            test_points_data.loc[:, "measurements"] = None
+            return test_points_data
+
         # Initialize engines:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Initialize engines")
         self.engines_controller.initialize(configuration=conf_data["engines"])
@@ -101,7 +121,11 @@ class FlyingProbe:
             self.probes_controller[probe] = \
                 probe_controller.ProbeController(oscilloscope_ctrl=self.oscilloscope_controller,
                                                  engines_ctrl=self.engines_controller)
-            self.probes_controller[probe].initialize(probe_name=probe, configuration=probe_conf)
+
+            # Initialize each probe: do homing
+            self.probes_controller[probe].initialize(probe_name=probe,
+                                                     configuration=probe_conf,
+                                                     calibration_points_df=calibration_points_data)
 
         # Iterate over each test point: move probes and measure:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Measure test points")
@@ -123,9 +147,11 @@ class FlyingProbe:
         return test_points_data
 
     def run(self):
+        # Initialize main variables:
         inputs_data = {}
         conf_data = {}
         test_points_data = pd.DataFrame()
+        calibration_points_data = pd.DataFrame()
 
         # Load previous test
         self.logger.set_message(level="INFO", message_level="SECTION", message="Load previous test")
@@ -134,18 +160,18 @@ class FlyingProbe:
         if not load_previous_test:
             self.logger.set_message(level="INFO", message_level="MESSAGE", message="Result: NO")
             # Run all pretest operations:
-            inputs_data, conf_data, test_points_data = self.pre_test_operations()
+            inputs_data, conf_data, test_points_data, calibration_points_data = self.pre_test_operations()
         else:
             self.logger.set_message(level="INFO", message_level="MESSAGE", message="Result: YES")
             # Load previous pre-test results:
             try:
-                inputs_data, test_points_data = self.pretest_controller.read_data()
+                inputs_data, test_points_data, calibration_points_data = self.pretest_controller.read_data()
             except Exception as exception:
                 self.logger.set_message(level="CRITICAL", message_level="MESSAGE", message="Unable to read files: "
                                                                                            f"{str(exception)}")
 
         # Run test:
-        test_points_data = self.execute_test(inputs_data, conf_data, test_points_data)
+        test_points_data = self.execute_test(inputs_data, conf_data, test_points_data, calibration_points_data)
 
         # Save results:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Save results")

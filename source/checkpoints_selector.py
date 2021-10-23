@@ -1,7 +1,8 @@
 import math
 import pandas as pd
 from shapely.geometry.polygon import Polygon
-from source import utils
+from source.utils import ROOT_PATH
+from source.utils import DataframeOperations
 
 
 pd.set_option('display.max_rows', None, 'display.max_columns', None)
@@ -129,24 +130,63 @@ class TestPointsSelector:
 
             # Remove those test points which has not usable probes
             test_points_df = test_points_df[test_points_df.probe_usable]
-        return test_points_df
+        return test_points_df.reset_index()
+
+
+class CalibrationPointsSelector:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def run(test_points_df, calibration_conf):
+        # Initialize empty dataframe:
+        calibration_points_df = pd.DataFrame(columns=list(test_points_df.columns))
+
+        # Check inputs:
+        if calibration_conf["points"] == 0 or calibration_conf["points"] < 0:
+            return calibration_points_df
+        if len(calibration_conf["nets"]) == 0:
+            return calibration_points_df
+
+        # Select possible calibration points:
+        possible_calibration_points = test_points_df[test_points_df["net_name"].isin(calibration_conf["nets"])]
+
+        if not possible_calibration_points.empty:
+            # Select point(s) to calibrate:
+            calibration_points_df = possible_calibration_points.iloc[0:calibration_conf["points"]].copy()
+
+            calibration_points_df.loc[:, "type"] = "homing"
+        return calibration_points_df
 
 
 if __name__ == "__main__":
     from source.pcb_mapping import PCBMapping
-    file_path = str(utils.ROOT_PATH) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
-    pcb_obj = PCBMapping(file_path)
-    info_df = pcb_obj.run()
 
-    configuration = {"1": {"inclination": 0,
-                           "diameter": 0.005,
-                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
-                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]},
-                     "2": {"inclination": 12,
-                           "diameter": 0.005,
-                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
-                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
-    user_nets_list = {"DATA-RB7": {}}
-    test_points_obj = TestPointsSelector()
-    tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), info_df)
+    # CHECKPOINTS SELECTOR:
+    # file_path = str(ROOT_PATH) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
+    # pcb_obj = PCBMapping(file_path)
+    # info_df = pcb_obj.run()
+
+    # configuration = {"1": {"inclination": 0,
+    #                        "diameter": 0.005,
+    #                        "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+    #                                  [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]},
+    #                  "2": {"inclination": 12,
+    #                        "diameter": 0.005,
+    #                        "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+    #                                  [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
+    # user_nets_list = {"DATA-RB7": {}}
+    # test_points_obj = TestPointsSelector()
+    # tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), info_df)
+    # print(tp_selector_result)
+
+    # CALIBRATION POINTS SELECTOR:
+    file_path = str(ROOT_PATH) + "//inputs//pcb_data.csv"
+    info_df = DataframeOperations.read_csv(file_path)
+
+    configuration = {"nets": ["VCC"],
+                     "points": 1}
+
+    test_points_obj = CalibrationPointsSelector()
+    tp_selector_result = test_points_obj.run(info_df, configuration)
     print(tp_selector_result)

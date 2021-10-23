@@ -66,6 +66,12 @@ def test_points_selector():
 
 
 @pytest.fixture
+def calibration_points_selector():
+    calibration_points_selector_obj = checkpoints_selector.CalibrationPointsSelector()
+    return calibration_points_selector_obj
+
+
+@pytest.fixture
 def inputs_controller_object():
     inputs_ctrl_obj = files_controller.InputsController()
     return inputs_ctrl_obj

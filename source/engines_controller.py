@@ -193,13 +193,13 @@ class ZAxisEngine:
 
 
 class EnginesController:
-    def __init__(self):
+    def __init__(self, logger_level="INFO"):
         # General attributes:
         self.xy_axis_ctrl = None
         self.z_axis_ctrl = None
 
         # Initialize serial port controller:
-        self.serial_port_ctrl = SerialPortController()
+        self.serial_port_ctrl = SerialPortController(logger_level=logger_level)
 
     def initialize(self, configuration):
         # Create connection:

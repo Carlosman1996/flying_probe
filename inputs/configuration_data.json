@@ -2,7 +2,13 @@
     "engines": {
         "serial_port": "COM7",
         "baud_rate": 250000,
-        "active": false
+        "active": false,
+        "calibration": {
+            "nets": [
+                "VCC"
+            ],
+            "points": 1
+        }
     },
     "oscilloscope": {
         "port": 5188,

@@ -93,6 +93,7 @@ class PCBMappingKiCAD:
 
         # PCB position on flying probe:
         self.position_offset = [100, 20]
+        self.rotate_pcb_degrees = 90    # TODO: Implement PCB rotation - X -> Y
 
         # Layers:
         self.borders_layers = ["Edge.Cuts"]
@@ -136,7 +137,7 @@ class PCBMappingKiCAD:
             return layer
 
         def get_minimum_point_for_reference(point_study, minimum_reference, position_offset):
-            if point_study < minimum_reference and point_study >= position_offset:
+            if minimum_reference > point_study >= position_offset:
                 minimum_reference = point_study
             elif point_study < position_offset:
                 minimum_reference = position_offset

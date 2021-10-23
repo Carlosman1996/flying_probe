@@ -21,11 +21,33 @@ class ProbeController:
         self.engines_ctrl = engines_ctrl
         self.oscilloscope_ctrl = oscilloscope_ctrl
 
-    def initialize(self, probe_name, configuration):
+    def initialize(self, probe_name, configuration, calibration_points_df):
         self.probe_name = int(probe_name)
         self.configuration = configuration  # General configuration of the probe: speed, acceleration, ...
-        self.engines_ctrl.xy_axis_ctrl.homing(probe=self.probe_name)
+
+        # Calibrate XY engines:
         # TODO: add probe XY position offset - PCB is placed at FP center
+        self.engines_ctrl.xy_axis_ctrl.homing(probe=self.probe_name)
+
+        # Calibrate Z engine:
+        for point_index, point_data in calibration_points_df.iterrows():
+            for coordinates in point_data["trajectories"]:
+                # Move XY engines:
+                self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
+                                                    # TODO: PCB mapping must rotate PCB, not this module
+                                                    y_move=coordinates['x'] - self.current_position['x'],
+                                                    x_move=coordinates['y'] - self.current_position['y'],
+                                                    speed=self.configuration["speed"])
+
+                # Update probe position:
+                self.current_position = {'x': coordinates['x'],
+                                         'y': coordinates['y']}
+
+                # Z axis homing:
+                self.engines_ctrl.z_axis_ctrl.homing(probe=self.probe_name)
+
+        # TODO: add flag to check if homing has been done or not
+        # return True or False
 
     def measure_test_point(self, trajectory, measurement_inputs, test_point_name=""):
         """ measure_test_point(self, list, dict)
@@ -39,8 +61,9 @@ class ProbeController:
         for coordinates in trajectory:
             # Move XY engines:
             self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
-                                                x_move=coordinates['x'] - self.current_position['x'],
-                                                y_move=coordinates['y'] - self.current_position['y'],
+                                                # TODO: PCB mapping must rotate PCB, not this module
+                                                y_move=coordinates['x'] - self.current_position['x'],
+                                                x_move=coordinates['y'] - self.current_position['y'],
                                                 speed=self.configuration["speed"])
 
             # Update probe position:
