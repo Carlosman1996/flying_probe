@@ -64,6 +64,7 @@ class SerialPortController:
     def wait_movement(self, position):
         # TODO: M114 is not working, it is received before finishing the movement
         position_command = "M114"
+        # TODO: FAIL - position fails - negative values
         self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Wait until position {position} has "
                                                                                 f"been reached")
 

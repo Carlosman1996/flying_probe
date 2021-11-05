@@ -26,6 +26,7 @@ class FlyingProbe:
         self.logger_level = logger_level
 
         # Initialize modules:
+        # TODO: add property() method to initialize parameters and perform inputs validation.
         self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=self.logger_level)
         self.inputs_controller = files_controller.InputsController(inputs_path=self.inputs_path)
         self.pretest_controller = files_controller.PreTestController(pretest_path=self.inputs_path)

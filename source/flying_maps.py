@@ -14,7 +14,8 @@ class FlyingMaps:
     def __init__(self):
         pass
 
-    def run(self, test_points_data):
+    @staticmethod
+    def run(test_points_data):
         # Select one test point per net:
         # TODO: total trajectory: minimum distance, not first occurrence
         simplified_tps_data = pd.DataFrame(columns=test_points_data.columns)
