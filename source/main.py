@@ -23,9 +23,10 @@ class FlyingProbe:
         # Main attributes:
         self.inputs_path = inputs_path
         self.outputs_path = outputs_path
+        self.logger_level = logger_level
 
         # Initialize modules:
-        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=self.logger_level)
         self.inputs_controller = files_controller.InputsController(inputs_path=self.inputs_path)
         self.pretest_controller = files_controller.PreTestController(pretest_path=self.inputs_path)
         self.outputs_controller = files_controller.OutputsController(outputs_path=self.outputs_path)
@@ -33,7 +34,7 @@ class FlyingProbe:
         self.checkpoints_selector = checkpoints_selector.TestPointsSelector()
         self.calibration_points_selector = checkpoints_selector.CalibrationPointsSelector()
         self.flying_maps = flying_maps.FlyingMaps()
-        self.engines_controller = engines_controller.EnginesController()
+        self.engines_controller = engines_controller.EnginesController(logger_level=self.logger_level)
         self.oscilloscope_controller = oscilloscope_controller.OscilloscopeController()
 
         self.probes_controller = {}
@@ -120,7 +121,8 @@ class FlyingProbe:
         for probe, probe_conf in conf_data["probes"].items():
             self.probes_controller[probe] = \
                 probe_controller.ProbeController(oscilloscope_ctrl=self.oscilloscope_controller,
-                                                 engines_ctrl=self.engines_controller)
+                                                 engines_ctrl=self.engines_controller,
+                                                 logger_level=self.logger_level)
 
             # Initialize each probe: do homing
             self.probes_controller[probe].initialize(probe_name=probe,
@@ -181,5 +183,5 @@ class FlyingProbe:
 if __name__ == "__main__":
     flying_probe_obj = FlyingProbe(inputs_path=ROOT_PATH + "//inputs//",
                                    outputs_path=ROOT_PATH + "//inputs//",
-                                   logger_level="INFO")
+                                   logger_level="DEBUG")
     flying_probe_obj.run()

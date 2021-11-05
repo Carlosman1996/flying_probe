@@ -21,6 +21,18 @@ class ProbeController:
         self.engines_ctrl = engines_ctrl
         self.oscilloscope_ctrl = oscilloscope_ctrl
 
+    def move_xy_engines(self, probe, coordinates):
+        # Move XY engines:
+        self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
+                                            # TODO: PCB mapping must rotate PCB, not this module
+                                            y_move=coordinates['x'] - self.current_position['x'],
+                                            x_move=coordinates['y'] - self.current_position['y'],
+                                            speed=self.configuration["speed"])
+
+        # Update probe position:
+        self.current_position = {'x': coordinates['x'],
+                                 'y': coordinates['y']}
+
     def initialize(self, probe_name, configuration, calibration_points_df):
         self.probe_name = int(probe_name)
         self.configuration = configuration  # General configuration of the probe: speed, acceleration, ...
@@ -32,19 +44,16 @@ class ProbeController:
         # Calibrate Z engine:
         for point_index, point_data in calibration_points_df.iterrows():
             for coordinates in point_data["trajectories"]:
-                # Move XY engines:
-                self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
-                                                    # TODO: PCB mapping must rotate PCB, not this module
-                                                    y_move=coordinates['x'] - self.current_position['x'],
-                                                    x_move=coordinates['y'] - self.current_position['y'],
-                                                    speed=self.configuration["speed"])
-
-                # Update probe position:
-                self.current_position = {'x': coordinates['x'],
-                                         'y': coordinates['y']}
+                # Move probe to Z homing point:
+                self.move_xy_engines(probe=self.probe_name,
+                                     coordinates=coordinates)
 
                 # Z axis homing:
                 self.engines_ctrl.z_axis_ctrl.homing(probe=self.probe_name)
+
+        # Move XY engines to initial position = [0, 0]:
+        self.move_xy_engines(probe=self.probe_name,
+                             coordinates={'x': 0, 'y': 0})
 
         # TODO: add flag to check if homing has been done or not
         # return True or False
@@ -60,15 +69,8 @@ class ProbeController:
         # Move probe to test point following the trajectory:
         for coordinates in trajectory:
             # Move XY engines:
-            self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
-                                                # TODO: PCB mapping must rotate PCB, not this module
-                                                y_move=coordinates['x'] - self.current_position['x'],
-                                                x_move=coordinates['y'] - self.current_position['y'],
-                                                speed=self.configuration["speed"])
-
-            # Update probe position:
-            self.current_position = {'x': coordinates['x'],
-                                     'y': coordinates['y']}
+            self.move_xy_engines(probe=self.probe_name,
+                                 coordinates=coordinates)
 
         # Measure test point:
         measurement_inputs["channel"] = self.probe_name

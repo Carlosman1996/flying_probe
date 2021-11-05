@@ -15,9 +15,10 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class SerialPortController:
-    RESPONSE_READ_ITERATIONS = 60
+    LOOP_ITERATIONS = 100
     INITIALIZATION_DELAY_TIME = 2
-    RESPONSE_DELAY_TIME = 1
+    RESPONSE_DELAY_TIME = 0.5
+    MOVEMENT_CHECK_ITERATION_TIME = 1
 
     def __init__(self, logger_level="INFO"):
         self.device_active = False
@@ -48,35 +49,44 @@ class SerialPortController:
 
     def read_response(self):
         response = ""
-        elapsed_time = 0
-        while self.session.inWaiting() > 0 and elapsed_time < self.RESPONSE_READ_ITERATIONS:
+        iteration_index = 0
+        while self.session.inWaiting() > 0 and iteration_index < self.LOOP_ITERATIONS:
             response += self.session.readline().decode("Ascii")
 
             time.sleep(self.RESPONSE_DELAY_TIME)
-            elapsed_time += 1
+            iteration_index += 1
+
+        # Raise exception if probe is not in expected position:
+        if iteration_index == self.LOOP_ITERATIONS:
+            raise Exception(f"Response could not be read.")
         return response
 
     def wait_movement(self, position):
+        # TODO: M114 is not working, it is received before finishing the movement
         position_command = "M114"
-        elapsed_time = 0
-        while elapsed_time < self.RESPONSE_READ_ITERATIONS:
-            if self.device_active:
-                # Get current position:
-                self.session.write(str.encode(position_command + "\r\n"))
+        self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Wait until position {position} has "
+                                                                                f"been reached")
 
-                # Read current position:
-                response = self.read_response()
+        iteration_index = 0
+        while iteration_index < self.LOOP_ITERATIONS:
+            if self.device_active:
+                response = self.send_command(position_command)
             else:
                 response = str(position)
 
             response_filtered = re.findall(r"[-+]?\d*\.\d+|\d+", response)
             if response_filtered:
-                response_coordinates = [float(number) for number in response_filtered][0:3]
-                if response_coordinates == position:
+                response_coordinates = [round(float(number), 4) for number in response_filtered][0:3]
+                rounded_position = [round(number, 4) for number in position]
+                if response_coordinates == rounded_position:
                     break
 
-            time.sleep(self.RESPONSE_DELAY_TIME)
-            elapsed_time += 1
+            time.sleep(self.MOVEMENT_CHECK_ITERATION_TIME)
+            iteration_index += 1
+
+        # Raise exception if probe is not in expected position:
+        if iteration_index == self.LOOP_ITERATIONS:
+            raise Exception(f"Position {position} has not been reached.")
 
     def send_command(self, command):
         response = None
@@ -128,14 +138,14 @@ class XYAxisEngines:
     @SerialPortController.check_command_response
     def move(self, probe, x_move=0, y_move=0, speed=0):
         # response = self.serial_port_ctrl.send_command(f"G{probe}0 Y{movement} F{speed}")
-        self.serial_port_ctrl.send_command(f"G91")
+
         if x_move == 0:
             response = self.serial_port_ctrl.send_command(f"G0 Y{y_move} F{speed}")
         elif y_move == 0:
             response = self.serial_port_ctrl.send_command(f"G0 X{x_move} F{speed}")
         else:
             response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
-        self.serial_port_ctrl.send_command(f"G90")
+
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
         self.serial_port_ctrl.wait_movement(position=[x_move, y_move, 0])
         return response
@@ -164,7 +174,8 @@ class ZAxisEngine:
         response = self.serial_port_ctrl.send_command("M4")
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
         # TODO: UNKNOWN STATE - PENDING STUDY
-        self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
+        # TODO: add wait movement
+        # self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
         return response
 
     @SerialPortController.check_command_response
@@ -173,7 +184,8 @@ class ZAxisEngine:
         response = self.serial_port_ctrl.send_command("M5")
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
         # TODO: UNKNOWN STATE - PENDING STUDY
-        self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
+        # TODO: add wait movement
+        # self.serial_port_ctrl.wait_movement(position=[0, 0, 0])
         return response
 
     def calibration(self, probe):
@@ -222,12 +234,15 @@ if __name__ == '__main__':
     conf = {
         "serial_port": "COM7",
         "baud_rate": 250000,
-        "active": False
+        "active": True
     }
-    engines_ctrl = EnginesController()
+    engines_ctrl = EnginesController(logger_level="DEBUG")
     engines_ctrl.initialize(configuration=conf)
 
-    engines_ctrl.xy_axis_ctrl.homing(0)
-    engines_ctrl.xy_axis_ctrl.move("", 0, 0, 1)
+    # engines_ctrl.xy_axis_ctrl.homing("")
+    # engines_ctrl.xy_axis_ctrl.move("", 10, 100, 10000)
+    engines_ctrl.z_axis_ctrl.homing("")
+    engines_ctrl.z_axis_ctrl.homing("")
+    engines_ctrl.z_axis_ctrl.low_level("")
 
     engines_ctrl.stop()
