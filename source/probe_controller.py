@@ -11,6 +11,7 @@ class ProbeController:
         # General attributes:
         self.probe_name = None
         self.configuration = {}
+        self.position_offset = [20, 100]    # TODO: Hardcoded - add to DB because and difference between probes
 
         # Set logger:
         self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
@@ -44,8 +45,8 @@ class ProbeController:
                 # Z axis homing:
                 self.engines_ctrl.z_axis_ctrl.homing(probe=self.probe_name)
 
-        # Move XY engines to initial position = [0, 0]:
-        self.move_xy_probe({'x': 0, 'y': 0})
+        # Move XY engines to initial position (position offset):
+        self.move_xy_probe({'x': self.position_offset[0], 'y': self.position_offset[1]})
 
         # TODO: add flag to check if homing has been done or not
         # return True or False
@@ -66,3 +67,15 @@ class ProbeController:
         measurement_inputs["channel"] = self.probe_name
         result = self.oscilloscope_ctrl.measure(measurement_inputs)
         return result
+
+    def stop(self):
+        # Move XY engines to initial position (position offset):
+        self.move_xy_probe({'x': self.position_offset[0], 'y': self.position_offset[1]})
+
+        # Stop oscilloscope:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Stop oscilloscope")
+        self.oscilloscope_ctrl.stop()
+
+        # Stop engines:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Stop engines")
+        self.engines_ctrl.stop()

@@ -1,5 +1,4 @@
 import sys
-import copy
 import pandas as pd
 
 import logger
@@ -140,13 +139,11 @@ class FlyingProbe:
                                                       test_point_name=test_point["net_name"]),
                                    axis=1)
 
-        # Stop oscilloscope:
-        self.logger.set_message(level="INFO", message_level="SECTION", message="Stop oscilloscope")
-        self.oscilloscope_controller.stop()
+        # Close probes:
+        self.logger.set_message(level="INFO", message_level="SECTION", message="Stop probes")
+        for probe, probe_conf in conf_data["probes"].items():
+            self.probes_controller[probe].stop()
 
-        # Stop engines:
-        self.logger.set_message(level="INFO", message_level="SECTION", message="Stop engines")
-        self.engines_controller.stop()
         return test_points_data
 
     def run(self):
@@ -185,3 +182,5 @@ if __name__ == "__main__":
     flying_probe_obj = FlyingProbe(inputs_path=ROOT_PATH + "//inputs//",
                                    outputs_path=ROOT_PATH + "//inputs//",
                                    logger_level="DEBUG")
+
+    flying_probe_obj.run()

@@ -92,7 +92,7 @@ class PCBMappingKiCAD:
         self.pcb_path = pcb_path
 
         # PCB position on flying probe:
-        self.position_offset = [100, 20]
+        self.position_offset = [100, 20]    # TODO: Hardcoded - add to DB because it's used in probe_controller
         self.rotate_pcb_degrees = 90    # TODO: Implement PCB rotation - X -> Y
 
         # Layers:

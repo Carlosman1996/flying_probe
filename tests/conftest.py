@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+
+import pandas as pd
 import pytest
 
 from source import engines_controller
@@ -46,7 +48,9 @@ def probe_inactive(oscilloscope_inactive, engines_inactive):
                      "speed": 10000}
     probe_obj = probe_controller.ProbeController(oscilloscope_ctrl=oscilloscope_inactive,
                                                  engines_ctrl=engines_inactive)
-    probe_obj.initialize(probe_name=configuration["probe"], configuration=configuration)
+    probe_obj.initialize(probe_name=configuration["probe"],
+                         configuration=configuration,
+                         calibration_points_df=pd.DataFrame())
     return probe_obj
 
 
