@@ -65,11 +65,13 @@ class VISAController:
                 response = self.session.read()
             except visa.VisaIOError as exception:
                 self.exception_handler(exception)
+
+            # Set response delay time:
+            time.sleep(self.RESPONSE_DELAY_TIME)
         # If the device is in test mode, generate a float random number:
         else:
             response = random.uniform(0, 1000000)
 
-        time.sleep(self.RESPONSE_DELAY_TIME)
         self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Response: {response}")
         return response
 

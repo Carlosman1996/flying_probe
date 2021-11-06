@@ -1,5 +1,6 @@
 import time
 import random
+import math
 from datetime import datetime
 import serial
 import re
@@ -15,7 +16,7 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class SerialPortController:
-    LOOP_ITERATIONS = 20
+    LOOP_ITERATIONS = 50
     INITIALIZATION_DELAY_TIME = 2
     RESPONSE_DELAY_TIME = 0.5
     MOVEMENT_CHECK_ITERATION_TIME = 0.5
@@ -76,8 +77,8 @@ class SerialPortController:
 
             response_filtered = re.findall(r"[-+]?\d*\.\d+|\d+", response)
             if response_filtered:
-                response_coordinates = [round(float(number), 1) for number in response_filtered][0:3]
-                rounded_position = [round(number, 1) for number in position]
+                response_coordinates = [math.floor(10 * float(number)) / 10 for number in response_filtered][0:3]
+                rounded_position = [math.floor(10 * number) / 10 for number in position]
                 if response_coordinates == rounded_position:
                     break
 
@@ -97,6 +98,9 @@ class SerialPortController:
             try:
                 # Write command and wait:
                 self.session.write(str.encode(command + "\r\n"))
+
+                # Wait until read response:
+                time.sleep(self.RESPONSE_DELAY_TIME)
 
                 # Read microcontroller response:
                 response = self.read_response()
@@ -142,18 +146,7 @@ class XYAxisEngines:
 
     @SerialPortController.check_command_response
     def move(self, probe, x_position=0, y_position=0, speed=0):
-        # Create movement:
-        x_move = x_position - self.current_position['x']
-        y_move = y_position - self.current_position['y']
-
-        # response = self.serial_port_ctrl.send_command(f"G{probe}0 Y{movement} F{speed}")
-
-        if x_move == 0:
-            response = self.serial_port_ctrl.send_command(f"G0 Y{y_move} F{speed}")
-        elif y_move == 0:
-            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} F{speed}")
-        else:
-            response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
+        response = self.serial_port_ctrl.send_command(f"G0 X{x_position} Y{y_position} F{speed}")
 
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
         self.serial_port_ctrl.wait_movement(position=[x_position, y_position, 0])
