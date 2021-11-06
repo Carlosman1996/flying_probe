@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "/CTS": {
         "coupling": "AC",
         "probe_attenuation": "X10",
@@ -118,6 +119,11 @@
     },
     "Net-(P3-Pad6)": {
         "coupling": "AC",
+=======
+    "/CLOCK-RB6": {
+        "trigger_edge_slope": "RISE",
+        "coupling": "DC",
+>>>>>>> PCB_mapping
         "probe_attenuation": "X10",
         "signal_max_value": 5,
         "signal_min_value": 0,
@@ -251,7 +257,11 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
+<<<<<<< HEAD
     "Net-(U5-Pad18)": {
+=======
+    "/DATA-RB7": {
+>>>>>>> PCB_mapping
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
