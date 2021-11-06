@@ -64,7 +64,6 @@ class SerialPortController:
     def wait_movement(self, position):
         # TODO: M114 is not working, it is received before finishing the movement
         position_command = "M114"
-        # TODO: FAIL - position fails - negative values
         self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Wait until position {position} has "
                                                                                 f"been reached")
 
@@ -136,8 +135,18 @@ class XYAxisEngines:
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
 
+        # Current position
+        self.current_position = {
+            'x': 0,
+            'y': 0
+        }
+
     @SerialPortController.check_command_response
-    def move(self, probe, x_move=0, y_move=0, speed=0):
+    def move(self, probe, x_position=0, y_position=0, speed=0):
+        # Create movement:
+        x_move = x_position - self.current_position['x']
+        y_move = y_position - self.current_position['y']
+
         # response = self.serial_port_ctrl.send_command(f"G{probe}0 Y{movement} F{speed}")
 
         if x_move == 0:
@@ -148,7 +157,13 @@ class XYAxisEngines:
             response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
 
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
-        self.serial_port_ctrl.wait_movement(position=[x_move, y_move, 0])
+        self.serial_port_ctrl.wait_movement(position=[self.current_position['x'], self.current_position['y'], 0])
+
+        # Update probe position:
+        self.current_position = {
+            'x': x_position,
+            'y': y_position
+        }
         return response
 
     @SerialPortController.check_command_response

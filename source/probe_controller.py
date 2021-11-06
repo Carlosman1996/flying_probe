@@ -11,8 +11,6 @@ class ProbeController:
         # General attributes:
         self.probe_name = None
         self.configuration = {}
-        self.current_position = {'x': 0,
-                                 'y': 0}
 
         # Set logger:
         self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
@@ -24,14 +22,10 @@ class ProbeController:
     def move_xy_probe(self, coordinates):
         # Move XY engines:
         self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
-                                            # TODO: PCB mapping must rotate PCB, not this module
-                                            y_move=coordinates['x'] - self.current_position['x'],
-                                            x_move=coordinates['y'] - self.current_position['y'],
+                                            # TODO: PCB mapping must rotate PCB, not this module (x -> y, y -> x)
+                                            y_position=coordinates['x'],
+                                            x_position=coordinates['y'],
                                             speed=self.configuration["speed"])
-
-        # Update probe position:
-        self.current_position = {'x': coordinates['x'],
-                                 'y': coordinates['y']}
 
     def initialize(self, probe_name, configuration, calibration_points_df):
         self.probe_name = int(probe_name)
