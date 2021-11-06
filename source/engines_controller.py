@@ -157,7 +157,7 @@ class XYAxisEngines:
             response = self.serial_port_ctrl.send_command(f"G0 X{x_move} Y{y_move} F{speed}")
 
         # TODO: study GCODES and MARLIN configuration to set a response after move engines
-        self.serial_port_ctrl.wait_movement(position=[self.current_position['x'], self.current_position['y'], 0])
+        self.serial_port_ctrl.wait_movement(position=[x_position, y_position, 0])
 
         # Update probe position:
         self.current_position = {
