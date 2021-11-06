@@ -15,10 +15,10 @@ __email__ = "cmmolinas01@gmail.com"
 
 
 class SerialPortController:
-    LOOP_ITERATIONS = 100
+    LOOP_ITERATIONS = 20
     INITIALIZATION_DELAY_TIME = 2
     RESPONSE_DELAY_TIME = 0.5
-    MOVEMENT_CHECK_ITERATION_TIME = 1
+    MOVEMENT_CHECK_ITERATION_TIME = 0.5
 
     def __init__(self, logger_level="INFO"):
         self.device_active = False
@@ -76,8 +76,8 @@ class SerialPortController:
 
             response_filtered = re.findall(r"[-+]?\d*\.\d+|\d+", response)
             if response_filtered:
-                response_coordinates = [round(float(number), 4) for number in response_filtered][0:3]
-                rounded_position = [round(number, 4) for number in position]
+                response_coordinates = [round(float(number), 1) for number in response_filtered][0:3]
+                rounded_position = [round(number, 1) for number in position]
                 if response_coordinates == rounded_position:
                     break
 
@@ -97,7 +97,6 @@ class SerialPortController:
             try:
                 # Write command and wait:
                 self.session.write(str.encode(command + "\r\n"))
-                time.sleep(self.RESPONSE_DELAY_TIME)
 
                 # Read microcontroller response:
                 response = self.read_response()
