@@ -63,6 +63,16 @@ class SerialPortController:
         return response
 
     def wait_movement(self, position):
+        def position_reached(current_position, expected_position):
+            differences = [abs(current_point - expected_point)
+                           for current_point, expected_point in zip(current_position, expected_position)]
+
+            # Check all errors:
+            for difference in differences:
+                if difference > 0.1:
+                    return False
+            return True
+
         # TODO: M114 is not working, it is received before finishing the movement
         position_command = "M114"
         self.logger.set_message(level="DEBUG", message_level="MESSAGE", message=f"Wait until position {position} has "
@@ -77,9 +87,8 @@ class SerialPortController:
 
             response_filtered = re.findall(r"[-+]?\d*\.\d+|\d+", response)
             if response_filtered:
-                response_coordinates = [math.floor(10 * float(number)) / 10 for number in response_filtered][0:3]
-                rounded_position = [math.floor(10 * number) / 10 for number in position]
-                if response_coordinates == rounded_position:
+                response_coordinates = [float(number) for number in response_filtered][0:3]
+                if position_reached(current_position=response_coordinates, expected_position=position):
                     break
 
             time.sleep(self.MOVEMENT_CHECK_ITERATION_TIME)
