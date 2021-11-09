@@ -176,14 +176,17 @@ class XYAxisEngines:
 
 
 class ZAxisEngine:
-    def __init__(self, serial_port_ctrl):
+    def __init__(self, serial_port_ctrl, logger_level="INFO"):
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
 
         # Define commands time constants:
-        self.calibration_command_time = 0.25
-        self.measurement_command_time = 0.75
-        self.homing_command_time = 1.25
+        self.measurement_command_time = 0.6
+        self.calibration_command_time = 1
+        self.homing_command_time = 1.5
+
+        # Set logger:
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
     @SerialPortController.check_command_response
     def low_level(self, probe):
@@ -206,16 +209,22 @@ class ZAxisEngine:
         return response
 
     def calibration(self, probe):
+        self.logger.set_message(level="INFO", message_level="MESSAGE", message=f"Z axis calibration")
+
         self.low_level(probe)
         time.sleep(self.calibration_command_time)
         self.high_level(probe)
 
     def measure(self, probe):
+        self.logger.set_message(level="INFO", message_level="MESSAGE", message=f"Z axis measure")
+
         self.low_level(probe)
         time.sleep(self.measurement_command_time)
         self.high_level(probe)
 
     def homing(self, probe):
+        self.logger.set_message(level="INFO", message_level="MESSAGE", message=f"Z axis homing")
+
         self.low_level(probe)
         time.sleep(self.homing_command_time)
         self.high_level(probe)
@@ -253,13 +262,35 @@ if __name__ == '__main__':
         "baud_rate": 250000,
         "active": True
     }
-    engines_ctrl = EnginesController(logger_level="DEBUG")
+    engines_ctrl = EnginesController(logger_level="INFO")
     engines_ctrl.initialize(configuration=conf)
 
     # engines_ctrl.xy_axis_ctrl.homing("")
     # engines_ctrl.xy_axis_ctrl.move("", 10, 100, 10000)
+    # engines_ctrl.z_axis_ctrl.homing("")
+    # engines_ctrl.z_axis_ctrl.low_level("")
+
+    # Start calibration
+    time.sleep(2)
     engines_ctrl.z_axis_ctrl.homing("")
+    time.sleep(2)
+    engines_ctrl.z_axis_ctrl.calibration("")
+    # Move probe to init
     engines_ctrl.z_axis_ctrl.homing("")
-    engines_ctrl.z_axis_ctrl.low_level("")
+    time.sleep(2)
+
+    # Measure:
+    time.sleep(3)
+    time.sleep(1)
+    engines_ctrl.z_axis_ctrl.measure("")    # Down
+    time.sleep(2)
+    engines_ctrl.z_axis_ctrl.measure("")    # Up
+
+    # Measure:
+    time.sleep(3)
+    time.sleep(2)
+    engines_ctrl.z_axis_ctrl.measure("")    # Down
+    time.sleep(1)
+    engines_ctrl.z_axis_ctrl.measure("")    # Up
 
     engines_ctrl.stop()

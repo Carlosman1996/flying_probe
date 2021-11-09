@@ -2,7 +2,7 @@
     "engines": {
         "serial_port": "COM7",
         "baud_rate": 250000,
-        "active": false,
+        "active": true,
         "calibration": {
             "nets": [
                 "VCC"
