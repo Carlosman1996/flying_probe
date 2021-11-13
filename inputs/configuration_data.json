@@ -2,10 +2,10 @@
     "engines": {
         "serial_port": "COM7",
         "baud_rate": 250000,
-        "active": true,
+        "active": false,
         "calibration": {
             "nets": [
-                "VCC"
+                "GND"
             ],
             "points": 1
         }

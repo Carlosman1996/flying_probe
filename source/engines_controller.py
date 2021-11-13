@@ -176,6 +176,8 @@ class XYAxisEngines:
 
 
 class ZAxisEngine:
+    ACTION_HARDCODED_TIME = 5
+
     def __init__(self, serial_port_ctrl, logger_level="INFO"):
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
@@ -214,6 +216,8 @@ class ZAxisEngine:
         self.low_level(probe)
         time.sleep(self.calibration_command_time)
         self.high_level(probe)
+        # TODO: read times correctly - avoid software continue while engine is moving
+        time.sleep(self.ACTION_HARDCODED_TIME)
 
     def measure(self, probe):
         self.logger.set_message(level="INFO", message_level="MESSAGE", message=f"Z axis measure")
@@ -221,6 +225,8 @@ class ZAxisEngine:
         self.low_level(probe)
         time.sleep(self.measurement_command_time)
         self.high_level(probe)
+        # TODO: read times correctly - avoid software continue while engine is moving
+        time.sleep(self.ACTION_HARDCODED_TIME)
 
     def homing(self, probe):
         self.logger.set_message(level="INFO", message_level="MESSAGE", message=f"Z axis homing")
@@ -228,6 +234,8 @@ class ZAxisEngine:
         self.low_level(probe)
         time.sleep(self.homing_command_time)
         self.high_level(probe)
+        # TODO: read times correctly - avoid software continue while engine is moving
+        time.sleep(self.ACTION_HARDCODED_TIME)
 
 
 class EnginesController:

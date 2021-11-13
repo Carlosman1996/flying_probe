@@ -1,3 +1,4 @@
+import os
 import sys
 import pandas as pd
 
@@ -11,6 +12,7 @@ import oscilloscope_controller
 import probe_controller
 from utils import ROOT_PATH
 from utils import FileOperations
+from utils import DataframeOperations
 
 
 __author__ = "Carlos Manuel Molina Sotoca"
@@ -67,8 +69,15 @@ class FlyingProbe:
         inputs_data, conf_data = self.inputs_controller.run()
 
         # Read PCB:
+        # TODO: remove lines commented used for testing
         self.logger.set_message(level="INFO", message_level="SECTION", message="Execute PCB Mapping module")
-        pcb_info_df = self.pcb_mapping.run()
+        # pcb_info_df = self.pcb_mapping.run()
+        pcb_info_df = DataframeOperations.read_csv(file_path=os.path.join(self.inputs_path, "pcb_data.csv"))
+        pcb_info_df.loc[:, ["position", "shape_lines", "shape_circles", "shape_arcs"]] = \
+            pd.DataFrame({"position": DataframeOperations.convert_str_to_list(pcb_info_df["position"]),
+                          "shape_lines": DataframeOperations.convert_str_to_list(pcb_info_df["shape_lines"]),
+                          "shape_circles": DataframeOperations.convert_str_to_list(pcb_info_df["shape_circles"]),
+                          "shape_arcs": DataframeOperations.convert_str_to_list(pcb_info_df["shape_arcs"])})
 
         # Run test points selector:
         self.logger.set_message(level="INFO", message_level="SECTION", message="Execute Calibration Points Selector"

@@ -1,5 +1,5 @@
 {
-    "/CTS": {
+    "net_1": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -8,7 +8,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "/DTR": {
+    "net_2": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -17,7 +17,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "/PC-CLOCK-OUT": {
+    "net_3": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -26,7 +26,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "/TXD": {
+    "net_4": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -35,7 +35,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "GND": {
+    "net_5": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -44,7 +44,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "/pic_sockets/VCC_PIC": {
+    "net_6": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -53,7 +53,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "Net-(D1-Pad2)": {
+    "net_7": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,
@@ -62,196 +62,7 @@
         "measurements": [],
         "trigger_edge_slope": "RISE"
     },
-    "Net-(D6-Pad2)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(D10-Pad2)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P3-Pad2)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P3-Pad3)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P3-Pad4)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P3-Pad5)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P3-Pad6)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U1-Pad7)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U4-Pad3)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U4-Pad4)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P2-Pad15)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P2-Pad2)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P2-Pad26)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P2-Pad13)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(P2-Pad14)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad1)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad10)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad2)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad8)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad17)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad9)": {
-        "coupling": "AC",
-        "probe_attenuation": "X10",
-        "signal_max_value": 5,
-        "signal_min_value": 0,
-        "frequency": 1000,
-        "measurements": [],
-        "trigger_edge_slope": "RISE"
-    },
-    "Net-(U5-Pad18)": {
+    "net_8": {
         "coupling": "AC",
         "probe_attenuation": "X10",
         "signal_max_value": 5,

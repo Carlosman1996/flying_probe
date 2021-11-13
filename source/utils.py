@@ -114,7 +114,30 @@ class DataframeOperations:
         dataframe.to_csv(file_path, sep=',', encoding='utf-8', index=False)
 
     @staticmethod
-    def read_csv(file_path):
+    def save_pickle(file_path, dataframe):
+        dataframe.to_pickle(file_path)
+
+    @staticmethod
+    def read_csv(file_path, converters=None):
+        # TODO: Converter raises EOF error
         FileOperations.check_file_exists(file_path)
-        df = pd.read_csv(file_path, sep=',', encoding='utf-8')
+        if converters:
+            df = pd.read_csv(file_path, converters=converters, sep=',', encoding='utf-8')
+        else:
+            df = pd.read_csv(file_path, sep=',', encoding='utf-8')
         return df
+
+    @staticmethod
+    def read_pickle(file_path):
+        # TODO: Pickle is not working as expected
+        pd.read_pickle(file_path)
+
+    @staticmethod
+    def convert_str_to_list(column):
+        processed_column = column.copy()
+
+        for key, item in processed_column.items():
+            if type(item) == str:
+                processed_column[key] = json.loads(item)
+        return processed_column
+

@@ -1,3 +1,4 @@
+import sys
 from source import logger
 from source.utils import FileOperations
 
@@ -44,12 +45,36 @@ class ProbeController:
 
                 # Z axis homing:
                 self.engines_ctrl.z_axis_ctrl.homing(probe=self.probe_name)
+                self.engines_ctrl.z_axis_ctrl.calibration(probe=self.probe_name)
+                self.engines_ctrl.z_axis_ctrl.homing(probe=self.probe_name)
 
         # Move XY engines to initial position (position offset):
         self.move_xy_probe({'x': self.position_offset[0], 'y': self.position_offset[1]})
 
         # TODO: add flag to check if homing has been done or not
         # return True or False
+
+    @staticmethod
+    def request_input(question=""):
+        valid = {"yes": True, "y": True, "no": False, "n": False}
+        prompt = " [Y/n] "
+
+        while True:
+            sys.stdout.write(question + prompt)
+            choice = input().lower()
+
+            # Enter as input:
+            if choice == "":
+                return True
+            # Valid input:
+            elif choice in valid:
+                if choice == "y" or choice == "yes":
+                    return True
+                else:
+                    return False
+            # Not valid input:
+            else:
+                sys.stdout.write("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
 
     def measure_test_point(self, trajectory, measurement_inputs, test_point_name=""):
         """ measure_test_point(self, list, dict)
@@ -64,8 +89,13 @@ class ProbeController:
             self.move_xy_probe(coordinates)
 
         # Measure test point:
+        self.engines_ctrl.z_axis_ctrl.measure(probe=self.probe_name)    # Down
         measurement_inputs["channel"] = self.probe_name
         result = self.oscilloscope_ctrl.measure(measurement_inputs)
+        # TODO: debugging purposes
+        if not self.request_input("Continue?"):
+            raise Exception("Execution stopped by user")
+        self.engines_ctrl.z_axis_ctrl.measure(probe=self.probe_name)    # Up
         return result
 
     def stop(self):

@@ -691,13 +691,21 @@ if __name__ == "__main__":
     # print(info_df)
 
     # METHOD 2:
-    pcb_obj = PCBMappingKiCAD()
-    pcb_info = pcb_obj.pcb_reader()
-    pcb_df = pcb_obj.dataframe_constructor(pcb_info)
+    # pcb_obj = PCBMappingKiCAD(pcb_path=ROOT_PATH + "//docs//software//inputs//pcb_file.kicad_pcb")
+    # pcb_info = pcb_obj.pcb_reader()
+    # pcb_df = pcb_obj.dataframe_constructor(pcb_info)
+    #
+    # with open(ROOT_PATH + "//inputs//pcb_data.json", 'w') as json_obj:
+    #     json.dump(pcb_info, json_obj, indent=4)
 
-    with open(ROOT_PATH + "//inputs//pcb_data.json", 'w') as json_obj:
-        json.dump(pcb_info, json_obj, indent=4)
-    DataframeOperations.save_csv(ROOT_PATH + "//inputs//pcb_data.csv", pcb_df)
+    # DataframeOperations.save_csv(ROOT_PATH + "//inputs//pcb_data.csv", pcb_df)
+
+    pcb_df = DataframeOperations.read_csv(ROOT_PATH + "//inputs//pcb_data.csv")
+    pcb_df.loc[:, ["position", "shape_lines", "shape_circles", "shape_arcs"]] = \
+        pd.DataFrame({"position": DataframeOperations.convert_str_to_list(pcb_df["position"]),
+                      "shape_lines": DataframeOperations.convert_str_to_list(pcb_df["shape_lines"]),
+                      "shape_circles": DataframeOperations.convert_str_to_list(pcb_df["shape_circles"]),
+                      "shape_arcs": DataframeOperations.convert_str_to_list(pcb_df["shape_arcs"])})
 
     pcb_draw_obj = PCBDrawing()
     pcb_draw_obj.run(pcb_df)

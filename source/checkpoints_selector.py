@@ -20,6 +20,8 @@ class TestPointsSelector:
 
     @staticmethod
     def get_shape_extreme_apexes(shape_coordinates):
+        print(shape_coordinates)
+        print(type(shape_coordinates))
         all_x_coordinates = [point_coords[0] for point_coords in shape_coordinates]
         all_y_coordinates = [point_coords[1] for point_coords in shape_coordinates]
         if len(all_x_coordinates) > 0 and len(all_y_coordinates) > 0:
@@ -113,23 +115,29 @@ class TestPointsSelector:
         # Check the number of pads available per user net:
         test_points_df = test_points_df[test_points_df["net_name"].isin(user_nets)]
 
-        # Filter pads: only are testable those whose distance with components are big enough to avoid probes collision
-        if not test_points_df.empty and not components_df.empty:
+        if not test_points_df.empty:
             # Add all probes to test points: duplicate each test point depending on the probe
             test_points_df = self.add_probes_to_test_points_dataframe(probes_conf, test_points_df)
 
-            # Calculate extreme apexes of each component:
-            components_df["extreme_apexes"] = \
-                components_df.apply(lambda component:
-                                    self.get_shape_extreme_apexes(component["shape_lines"]), axis=1)   # TODO: add arcs and circles to polygon shape
+            # Filter pads: only are testable those whose distance with components are big enough to avoid probes
+            # collision
+            if not components_df.empty:
+                # Calculate extreme apexes of each component:
+                # TODO: add arcs and circles to polygon shape
+                components_df["extreme_apexes"] = \
+                    components_df.apply(lambda component:
+                                        self.get_shape_extreme_apexes(component["shape_lines"]), axis=1)
 
-            # Check if probe can be used:
-            test_points_df["probe_usable"] = \
-                test_points_df.apply(lambda test_point: self.check_probe_in_tp(test_point,
-                                                                               components_df.copy()), axis=1)
+                # Check if probe can be used:
+                test_points_df["probe_usable"] = \
+                    test_points_df.apply(lambda test_point: self.check_probe_in_tp(test_point,
+                                                                                   components_df.copy()), axis=1)
 
-            # Remove those test points which has not usable probes
-            test_points_df = test_points_df[test_points_df.probe_usable]
+                # Remove those test points which has not usable probes
+                test_points_df = test_points_df[test_points_df.probe_usable]
+            else:
+                test_points_df.loc[:, "probe_usable"] = True
+
         return test_points_df.reset_index()
 
 
@@ -163,30 +171,33 @@ if __name__ == "__main__":
     from source.pcb_mapping import PCBMapping
 
     # CHECKPOINTS SELECTOR:
-    # file_path = str(ROOT_PATH) + "//assets//PCB//pic_programmer//API_info//API_info_pcb.csv"
-    # pcb_obj = PCBMapping(file_path)
-    # info_df = pcb_obj.run()
+    pcb_info_df = DataframeOperations.read_csv(file_path=str(ROOT_PATH) + "//inputs//pcb_data.csv")
+    pcb_info_df.loc[:, ["position", "shape_lines", "shape_circles", "shape_arcs"]] = \
+        pd.DataFrame({"position": DataframeOperations.convert_str_to_list(pcb_info_df["position"]),
+                      "shape_lines": DataframeOperations.convert_str_to_list(pcb_info_df["shape_lines"]),
+                      "shape_circles": DataframeOperations.convert_str_to_list(pcb_info_df["shape_circles"]),
+                      "shape_arcs": DataframeOperations.convert_str_to_list(pcb_info_df["shape_arcs"])})
 
-    # configuration = {"1": {"inclination": 0,
-    #                        "diameter": 0.005,
-    #                        "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
-    #                                  [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]},
-    #                  "2": {"inclination": 12,
-    #                        "diameter": 0.005,
-    #                        "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
-    #                                  [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
-    # user_nets_list = {"DATA-RB7": {}}
-    # test_points_obj = TestPointsSelector()
-    # tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), info_df)
-    # print(tp_selector_result)
-
-    # CALIBRATION POINTS SELECTOR:
-    file_path = str(ROOT_PATH) + "//inputs//pcb_data.csv"
-    info_df = DataframeOperations.read_csv(file_path)
-
-    configuration = {"nets": ["VCC"],
-                     "points": 1}
-
-    test_points_obj = CalibrationPointsSelector()
-    tp_selector_result = test_points_obj.run(info_df, configuration)
+    configuration = {"1": {"inclination": 0,
+                           "diameter": 0.005,
+                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]},
+                     "2": {"inclination": 12,
+                           "diameter": 0.005,
+                           "shape": [[0, 0], [0.25, 0], [0.25, 2], [1.25, 2], [2.25, 2], [2.25, 6], [-2.25, 6],
+                                     [-2.25, 2], [-1.25, 2], [-0.25, 2], [-0.25, 0]]}}
+    user_nets_list = {"net_1": {}}
+    test_points_obj = TestPointsSelector()
+    tp_selector_result = test_points_obj.run(configuration, list(user_nets_list.keys()), pcb_info_df)
     print(tp_selector_result)
+
+    # # CALIBRATION POINTS SELECTOR:
+    # file_path = str(ROOT_PATH) + "//inputs//pcb_data.csv"
+    # info_df = DataframeOperations.read_csv(file_path)
+    #
+    # configuration = {"nets": ["VCC"],
+    #                  "points": 1}
+    #
+    # test_points_obj = CalibrationPointsSelector()
+    # tp_selector_result = test_points_obj.run(info_df, configuration)
+    # print(tp_selector_result)
