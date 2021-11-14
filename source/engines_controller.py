@@ -24,6 +24,7 @@ class SerialPortController:
     def __init__(self, logger_level="INFO"):
         self.device_active = False
         self.session = None
+        self.logger_level = logger_level
 
         # Set logger:
         self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
@@ -143,7 +144,7 @@ class SerialPortController:
 
 
 class XYAxisEngines:
-    def __init__(self, serial_port_ctrl):
+    def __init__(self, serial_port_ctrl, logger_level="INFO"):
         # General attributes:
         self.serial_port_ctrl = serial_port_ctrl
 
@@ -152,6 +153,9 @@ class XYAxisEngines:
             'x': 0,
             'y': 0
         }
+
+        # Set logger:
+        self.logger = logger.Logger(module=FileOperations.get_file_name(__file__), level=logger_level)
 
     @SerialPortController.check_command_response
     def move(self, probe, x_position=0, y_position=0, speed=0):
@@ -176,7 +180,7 @@ class XYAxisEngines:
 
 
 class ZAxisEngine:
-    ACTION_HARDCODED_TIME = 5
+    ACTION_HARDCODED_TIME = 0
 
     def __init__(self, serial_port_ctrl, logger_level="INFO"):
         # General attributes:
@@ -243,6 +247,7 @@ class EnginesController:
         # General attributes:
         self.xy_axis_ctrl = None
         self.z_axis_ctrl = None
+        self.logger_level = logger_level
 
         # Initialize serial port controller:
         self.serial_port_ctrl = SerialPortController(logger_level=logger_level)
@@ -254,10 +259,10 @@ class EnginesController:
                                                 devices_active=configuration["active"])
 
         # Initialize X axis engine controller:
-        self.xy_axis_ctrl = XYAxisEngines(self.serial_port_ctrl)
+        self.xy_axis_ctrl = XYAxisEngines(self.serial_port_ctrl, logger_level=self.logger_level)
 
         # Initialize Z axis engine controller:
-        self.z_axis_ctrl = ZAxisEngine(self.serial_port_ctrl)
+        self.z_axis_ctrl = ZAxisEngine(self.serial_port_ctrl, logger_level=self.logger_level)
 
     def stop(self):
         # Close serial port controller:
@@ -268,37 +273,37 @@ if __name__ == '__main__':
     conf = {
         "serial_port": "COM7",
         "baud_rate": 250000,
-        "active": True
+        "active": False
     }
-    engines_ctrl = EnginesController(logger_level="INFO")
+    engines_ctrl = EnginesController(logger_level="DEBUG")
     engines_ctrl.initialize(configuration=conf)
 
-    # engines_ctrl.xy_axis_ctrl.homing("")
-    # engines_ctrl.xy_axis_ctrl.move("", 10, 100, 10000)
+    engines_ctrl.xy_axis_ctrl.homing("")
+    engines_ctrl.xy_axis_ctrl.move("", 10, 100, 10000)
+    engines_ctrl.z_axis_ctrl.homing("")
+    engines_ctrl.z_axis_ctrl.low_level("")
+
+    # # Start calibration
+    # time.sleep(2)
     # engines_ctrl.z_axis_ctrl.homing("")
-    # engines_ctrl.z_axis_ctrl.low_level("")
-
-    # Start calibration
-    time.sleep(2)
-    engines_ctrl.z_axis_ctrl.homing("")
-    time.sleep(2)
-    engines_ctrl.z_axis_ctrl.calibration("")
-    # Move probe to init
-    engines_ctrl.z_axis_ctrl.homing("")
-    time.sleep(2)
-
-    # Measure:
-    time.sleep(3)
-    time.sleep(1)
-    engines_ctrl.z_axis_ctrl.measure("")    # Down
-    time.sleep(2)
-    engines_ctrl.z_axis_ctrl.measure("")    # Up
-
-    # Measure:
-    time.sleep(3)
-    time.sleep(2)
-    engines_ctrl.z_axis_ctrl.measure("")    # Down
-    time.sleep(1)
-    engines_ctrl.z_axis_ctrl.measure("")    # Up
-
-    engines_ctrl.stop()
+    # time.sleep(2)
+    # engines_ctrl.z_axis_ctrl.calibration("")
+    # # Move probe to init
+    # engines_ctrl.z_axis_ctrl.homing("")
+    # time.sleep(2)
+    #
+    # # Measure:
+    # time.sleep(3)
+    # time.sleep(1)
+    # engines_ctrl.z_axis_ctrl.measure("")    # Down
+    # time.sleep(2)
+    # engines_ctrl.z_axis_ctrl.measure("")    # Up
+    #
+    # # Measure:
+    # time.sleep(3)
+    # time.sleep(2)
+    # engines_ctrl.z_axis_ctrl.measure("")    # Down
+    # time.sleep(1)
+    # engines_ctrl.z_axis_ctrl.measure("")    # Up
+    #
+    # engines_ctrl.stop()

@@ -86,7 +86,7 @@ class VISAController:
 class OscilloscopeController(VISAController):
     """Methods implemented for the oscilloscope OWON VDS1022"""
 
-    def __init__(self):
+    def __init__(self, logger_level="INFO"):
         # Oscilloscope attributes:
         self.address = None
         self.pixels_per_div = 25
@@ -108,7 +108,7 @@ class OscilloscopeController(VISAController):
         self.relation_acq_time_horizontal = 5
 
         # VISA controller:
-        super().__init__()
+        super().__init__(logger_level=logger_level)
 
     def convert_pixels_to_value(self, vertical_scale, offset_per_div, pixels):
         try:
@@ -321,7 +321,7 @@ if __name__ == '__main__':
         "port": 5188,
         "active": False
     }
-    osc_obj = OscilloscopeController()
+    osc_obj = OscilloscopeController(logger_level="DEBUG")
 
     # Initialize oscilloscope:
     osc_obj.initialize(configuration=conf)

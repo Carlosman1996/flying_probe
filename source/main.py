@@ -37,7 +37,7 @@ class FlyingProbe:
         self.calibration_points_selector = checkpoints_selector.CalibrationPointsSelector()
         self.flying_maps = flying_maps.FlyingMaps()
         self.engines_controller = engines_controller.EnginesController(logger_level=self.logger_level)
-        self.oscilloscope_controller = oscilloscope_controller.OscilloscopeController()
+        self.oscilloscope_controller = oscilloscope_controller.OscilloscopeController(logger_level=self.logger_level)
 
         self.probes_controller = {}
 
@@ -190,6 +190,6 @@ class FlyingProbe:
 if __name__ == "__main__":
     flying_probe_obj = FlyingProbe(inputs_path=ROOT_PATH + "//inputs//",
                                    outputs_path=ROOT_PATH + "//inputs//",
-                                   logger_level="INFO")
+                                   logger_level="DEBUG")
 
     flying_probe_obj.run()
