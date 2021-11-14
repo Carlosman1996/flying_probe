@@ -190,6 +190,6 @@ class FlyingProbe:
 if __name__ == "__main__":
     flying_probe_obj = FlyingProbe(inputs_path=ROOT_PATH + "//inputs//",
                                    outputs_path=ROOT_PATH + "//inputs//",
-                                   logger_level="DEBUG")
+                                   logger_level="INFO")
 
     flying_probe_obj.run()

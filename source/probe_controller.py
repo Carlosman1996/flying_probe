@@ -46,6 +46,9 @@ class ProbeController:
 
     def move_xy_probe(self, coordinates):
         # Move XY engines:
+        print('\n')
+        print(f"y_position={coordinates['x']}")
+        print(f"x_position={coordinates['y']}")
         self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
                                             # TODO: PCB mapping must rotate PCB, not this module (x -> y, y -> x)
                                             y_position=coordinates['x'],
@@ -95,7 +98,7 @@ class ProbeController:
 
         # Measure test point:
         # self.engines_ctrl.z_axis_ctrl.measure(probe=self.probe_name)    # Down
-        # measurement_inputs["channel"] = self.probe_name
+        measurement_inputs["channel"] = self.probe_name
         result = self.oscilloscope_ctrl.measure(measurement_inputs)
         # TODO: debugging purposes
         if self.logger_level == "DEBUG":

@@ -1,12 +1,12 @@
 type,name,layer,net_name,net_class,drill,diameters,position,shape_lines,shape_circles,shape_arcs,height
-border,,Edge.Cuts,,,,,,"[[109.2, 46.6], [109.2, 198.6], [109.2, 198.6], [262.2, 198.6], [262.2, 198.6], [262.2, 46.6], [262.2, 46.6], [109.2, 46.6]]",[],[],0
-via,,top_layer bottom_layer,GND,Default,0,4,"[131.3, 77.8]",[],[],[],0
-via,,top_layer bottom_layer,net_1,Default,0,4,"[121.9, 62.6]",[],[],[],0
-via,,top_layer bottom_layer,net_2,Default,0,4,"[166.2, 105.8]",[],[],[],0
-via,,top_layer bottom_layer,net_3,Default,0,4,"[188.7, 128.2]",[],[],[],0
-via,,top_layer bottom_layer,net_4,Default,0,4,"[255.2, 193.6]",[],[],[],0
-via,,top_layer bottom_layer,net_5,Default,0,4,"[250.2, 58.7]",[],[],[],0
-via,,top_layer bottom_layer,net_6,Default,0,4,"[220.7, 82.6]",[],[],[],0
-via,,top_layer bottom_layer,net_7,Default,0,4,"[147.2, 158.9]",[],[],[],0
-via,,top_layer bottom_layer,net_8,Default,0,4,"[115.7, 191.6]",[],[],[],0
-via,,top_layer bottom_layer,net_9,Default,0,4,"[119.7, 123.6]",[],[],[],0
+border,,Edge.Cuts,,,,,,"[[46.6, 109.2], [198.6, 109.2], [198.6, 109.2], [198.6, 262.2], [198.6, 262.2], [46.6, 262.2], [46.6, 262.2], [46.6, 109.2]]",[],[],0
+via,,top_layer bottom_layer,GND,Default,0,4,"[77.8, 131.3]",[],[],[],0
+via,,top_layer bottom_layer,net_1,Default,0,4,"[62.6, 121.9]",[],[],[],0
+via,,top_layer bottom_layer,net_2,Default,0,4,"[105.8, 166.2]",[],[],[],0
+via,,top_layer bottom_layer,net_3,Default,0,4,"[128.2, 188.7]",[],[],[],0
+via,,top_layer bottom_layer,net_4,Default,0,4,"[193.6, 255.2]",[],[],[],0
+via,,top_layer bottom_layer,net_5,Default,0,4,"[58.7, 250.2]",[],[],[],0
+via,,top_layer bottom_layer,net_6,Default,0,4,"[82.6, 220.7]",[],[],[],0
+via,,top_layer bottom_layer,net_7,Default,0,4,"[158.9, 147.2]",[],[],[],0
+via,,top_layer bottom_layer,net_8,Default,0,4,"[191.6, 115.7]",[],[],[],0
+via,,top_layer bottom_layer,net_9,Default,0,4,"[123.6, 119.7]",[],[],[],0
