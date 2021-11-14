@@ -46,9 +46,6 @@ class ProbeController:
 
     def move_xy_probe(self, coordinates):
         # Move XY engines:
-        print('\n')
-        print(f"y_position={coordinates['x']}")
-        print(f"x_position={coordinates['y']}")
         self.engines_ctrl.xy_axis_ctrl.move(probe=self.probe_name,
                                             # TODO: PCB mapping must rotate PCB, not this module (x -> y, y -> x)
                                             y_position=coordinates['x'],
